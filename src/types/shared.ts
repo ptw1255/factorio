@@ -50,3 +50,24 @@ export interface DeliveryCompleteMessage {
   orderId: string
   deliveredAt: string
 }
+
+export interface MaterialsPurchasedMessage {
+  poId: string
+  supplier: string
+  totalCost: number
+  items: { ingredient: string; quantity: number; unitCost: number }[]
+}
+
+export interface ShipmentRequestedMessage {
+  shipmentId: string
+  orderId: string
+  recipeId: string
+  palletCount: number
+  deliveryAddress: string
+}
+
+export interface ProductionNeededMessage {
+  orderId: string
+  recipeId: string
+  quantity: number
+}

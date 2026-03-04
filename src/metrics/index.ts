@@ -66,4 +66,45 @@ export const activeProcesses = new Gauge({
   registers: [register],
 })
 
+export const ordersTotal = new Counter({
+  name: 'factory_orders_total',
+  help: 'Total orders by priority and fulfillment status',
+  labelNames: ['priority', 'fulfillment'] as const,
+  registers: [register],
+})
+
+export const revenueTotal = new Counter({
+  name: 'factory_revenue_total',
+  help: 'Total revenue in dollars',
+  labelNames: ['recipe'] as const,
+  registers: [register],
+})
+
+export const cogsTotal = new Counter({
+  name: 'factory_cogs_total',
+  help: 'Total cost of goods sold',
+  labelNames: ['category'] as const,
+  registers: [register],
+})
+
+export const cashBalance = new Gauge({
+  name: 'factory_cash_balance',
+  help: 'Current cash balance',
+  registers: [register],
+})
+
+export const inventoryValue = new Gauge({
+  name: 'factory_inventory_value',
+  help: 'Current inventory value',
+  labelNames: ['type'] as const,
+  registers: [register],
+})
+
+export const deliveriesTotal = new Counter({
+  name: 'factory_deliveries_total',
+  help: 'Total deliveries by status',
+  labelNames: ['status'] as const,
+  registers: [register],
+})
+
 collectDefaultMetrics({ register })
