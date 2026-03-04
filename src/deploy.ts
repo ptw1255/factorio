@@ -10,6 +10,10 @@ async function deploy() {
     'brewing-process.bpmn',
     'bottling-process.bpmn',
     'crating-process.bpmn',
+    'sales-process.bpmn',
+    'materials-process.bpmn',
+    'distribution-process.bpmn',
+    'accounting-process.bpmn',
   ]
 
   for (const file of bpmnFiles) {

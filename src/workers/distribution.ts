@@ -6,13 +6,19 @@ import { confirmDelivery } from '../automation/distribution/delivery-confirmatio
 import { DistributionProcessVariables } from '../types/distribution-variables'
 import { workerDuration, stepCount, deliveriesTotal } from '../metrics/index'
 
-function withMetrics<T>(workerName: string, workerType: 'llm' | 'automation', handler: (job: any) => T): (job: any) => T {
+function withMetrics<T>(
+  workerName: string,
+  workerType: 'llm' | 'automation',
+  handler: (job: any) => T
+): (job: any) => T {
   return (job) => {
     const end = workerDuration.startTimer({ worker: workerName, type: workerType })
     stepCount.inc({ worker: workerName, type: workerType })
     const result = handler(job)
     if (result && typeof (result as any).then === 'function') {
-      return (result as any).then((res: any) => { end(); return res }).catch((err: any) => { end(); throw err }) as T
+      return (result as any)
+        .then((res: any) => { end(); return res })
+        .catch((err: any) => { end(); throw err }) as T
     }
     end()
     return result
@@ -20,6 +26,7 @@ function withMetrics<T>(workerName: string, workerType: 'llm' | 'automation', ha
 }
 
 export function registerDistributionWorkers(zeebe: ZeebeGrpcClient): void {
+  // 1. Route Planning (LLM)
   zeebe.createWorker({
     taskType: 'route-planning',
     timeout: 60000,
@@ -27,44 +34,46 @@ export function registerDistributionWorkers(zeebe: ZeebeGrpcClient): void {
       const vars = job.variables as unknown as DistributionProcessVariables
       try {
         const route = await routePlanningAgent(vars.deliveryAddress, vars.palletCount, vars.totalWeight)
-        console.log(`[route-planning] \u2713 ${vars.shipmentId} truck=${route.truckId} distance=${route.estimatedDistance}mi`)
+        console.log(`[route-planning] ✓ shipment=${vars.shipmentId} truck=${route.truckId} distance=${route.estimatedDistance}mi hours=${route.estimatedHours}`)
         return job.complete({ route } as any)
       } catch (err) {
-        console.error(`[route-planning] \u2717 ${vars.shipmentId} error:`, err)
+        console.error(`[route-planning] ✗ shipment=${vars.shipmentId} error:`, err)
         throw err
       }
     }),
   })
 
+  // 2. Load Assignment (automation)
   zeebe.createWorker({
     taskType: 'load-assignment',
     taskHandler: withMetrics('load-assignment', 'automation', (job) => {
       const vars = job.variables as unknown as DistributionProcessVariables
       const truckId = vars.route?.truckId || 'TRUCK-01'
       const loadAssignment = assignLoad(truckId, vars.shipmentId, vars.palletCount, vars.totalWeight)
-      console.log(`[load-assignment] \u2713 ${vars.shipmentId} BOL=${loadAssignment.billOfLadingId} pallets=${loadAssignment.palletIds.length}`)
+      console.log(`[load-assignment] ✓ shipment=${vars.shipmentId} bol=${loadAssignment.billOfLadingId} pallets=${loadAssignment.palletIds.length}`)
       return job.complete({ loadAssignment } as any)
     }),
   })
 
+  // 3. Dispatch Truck (automation)
   zeebe.createWorker({
     taskType: 'dispatch-truck',
     taskHandler: withMetrics('dispatch-truck', 'automation', (job) => {
       const vars = job.variables as unknown as DistributionProcessVariables
-      const distance = vars.route?.estimatedDistance || 50
-      const transitTimeSeconds = calculateTransitTime(distance)
-      console.log(`[dispatch-truck] \u2713 ${vars.shipmentId} departed, transit=${transitTimeSeconds}s (simulated)`)
-      return job.complete({ transitTimeSeconds } as any)
+      const transitTime = calculateTransitTime(vars.route?.estimatedDistance || 100)
+      console.log(`[dispatch-truck] ✓ shipment=${vars.shipmentId} truck=${vars.route?.truckId || 'TRUCK-01'} transitTime=${transitTime}h`)
+      return job.complete({ transitTimeSeconds: transitTime } as any)
     }),
   })
 
+  // 4. Delivery Confirmation (automation)
   zeebe.createWorker({
     taskType: 'delivery-confirmation',
     taskHandler: withMetrics('delivery-confirmation', 'automation', (job) => {
       const vars = job.variables as unknown as DistributionProcessVariables
       const deliveryResult = confirmDelivery(vars.shipmentId)
       deliveriesTotal.inc({ status: deliveryResult.condition })
-      console.log(`[delivery-confirmation] \u2713 ${vars.shipmentId} delivered condition=${deliveryResult.condition} signed=${deliveryResult.signedBy}`)
+      console.log(`[delivery-confirmation] ✓ shipment=${vars.shipmentId} signedBy="${deliveryResult.signedBy}" condition=${deliveryResult.condition}`)
       return job.complete({ deliveryResult } as any)
     }),
   })

@@ -4,16 +4,22 @@ import { recordMaterialsCost } from '../automation/accounting/record-materials-c
 import { calculateBatchCost } from '../automation/accounting/calculate-batch-cost'
 import { recordShippingCost } from '../automation/accounting/record-shipping-cost'
 import { AccountingProcessVariables } from '../types/accounting-variables'
-import { workerDuration, stepCount, revenueTotal, cogsTotal, cashBalance } from '../metrics/index'
-import { factoryState } from '../state'
+import { parkersKolsch } from '../recipes/parkers-kolsch'
+import { workerDuration, stepCount, cogsTotal, revenueTotal, cashBalance } from '../metrics/index'
 
-function withMetrics<T>(workerName: string, workerType: 'llm' | 'automation', handler: (job: any) => T): (job: any) => T {
+function withMetrics<T>(
+  workerName: string,
+  workerType: 'llm' | 'automation',
+  handler: (job: any) => T
+): (job: any) => T {
   return (job) => {
     const end = workerDuration.startTimer({ worker: workerName, type: workerType })
     stepCount.inc({ worker: workerName, type: workerType })
     const result = handler(job)
     if (result && typeof (result as any).then === 'function') {
-      return (result as any).then((res: any) => { end(); return res }).catch((err: any) => { end(); throw err }) as T
+      return (result as any)
+        .then((res: any) => { end(); return res })
+        .catch((err: any) => { end(); throw err }) as T
     }
     end()
     return result
@@ -21,57 +27,65 @@ function withMetrics<T>(workerName: string, workerType: 'llm' | 'automation', ha
 }
 
 export function registerAccountingWorkers(zeebe: ZeebeGrpcClient): void {
+  // 1. Record Revenue (automation)
   zeebe.createWorker({
     taskType: 'record-revenue',
     taskHandler: withMetrics('record-revenue', 'automation', (job) => {
       const vars = job.variables as unknown as AccountingProcessVariables
-      const order = vars.order!
-      const pricePerCase = vars.amount || 36
-      const entry = recordRevenue(order.orderId, order.recipeId, order.quantity, pricePerCase)
-      revenueTotal.inc({ recipe: order.recipeId }, entry.amount)
-      cashBalance.set(factoryState.getAccountBalance('CASH'))
-      console.log(`[record-revenue] \u2713 order=${order.orderId} amount=$${entry.amount}`)
+      const order = vars.order
+      const pricePerCase = vars.amount || parkersKolsch.pricing.basePricePerCase
+      const cases = order?.quantity || 1
+      const orderId = vars.correlationId
+      const recipeId = order?.recipeId || parkersKolsch.id
+      const entry = recordRevenue(orderId, recipeId, cases, pricePerCase)
+      revenueTotal.inc({ recipe: recipeId }, entry.amount)
+      cashBalance.inc(entry.amount)
+      console.log(`[record-revenue] ✓ order=${orderId} amount=$${entry.amount} entry=${entry.entryId}`)
       return job.complete({ ledgerEntryId: entry.entryId } as any)
     }),
   })
 
+  // 2. Record Materials Cost (automation)
   zeebe.createWorker({
     taskType: 'record-materials-cost',
     taskHandler: withMetrics('record-materials-cost', 'automation', (job) => {
       const vars = job.variables as unknown as AccountingProcessVariables
       const totalCost = vars.purchase?.totalCost || vars.amount || 0
-      const entry = recordMaterialsCost(vars.correlationId, totalCost)
+      const poId = vars.correlationId
+      const entry = recordMaterialsCost(poId, totalCost)
       cogsTotal.inc({ category: 'materials' }, entry.amount)
-      cashBalance.set(factoryState.getAccountBalance('CASH'))
-      console.log(`[record-materials-cost] \u2713 po=${vars.correlationId} amount=$${entry.amount}`)
+      cashBalance.dec(entry.amount)
+      console.log(`[record-materials-cost] ✓ po=${poId} amount=$${entry.amount} entry=${entry.entryId}`)
       return job.complete({ ledgerEntryId: entry.entryId } as any)
     }),
   })
 
+  // 3. Calculate Batch Cost (automation)
   zeebe.createWorker({
     taskType: 'calculate-batch-cost',
     taskHandler: withMetrics('calculate-batch-cost', 'automation', (job) => {
       const vars = job.variables as unknown as AccountingProcessVariables
-      const batch = vars.batch!
-      const casesProduced = Math.floor((batch.volume || 5) * 128 / 12 / 24) || 50
-      const recipe = (vars as any).recipe || require('../recipes/parkers-kolsch').parkersKolsch
-      const costSheet = calculateBatchCost(batch.batchId, recipe, casesProduced)
-      cogsTotal.inc({ category: 'labor' }, costSheet.totalLabor)
-      cogsTotal.inc({ category: 'overhead' }, costSheet.totalOverhead)
-      console.log(`[calculate-batch-cost] \u2713 batch=${batch.batchId} total=$${costSheet.totalCost.toFixed(2)} perCase=$${costSheet.costPerCase.toFixed(2)}`)
-      return job.complete({ ledgerEntryId: factoryState.getLedger().at(-1)?.entryId, batchCostSheet: costSheet } as any)
+      const batchId = vars.correlationId
+      const recipe = parkersKolsch
+      const casesProduced = vars.batch?.costPerCase ? Math.round(vars.amount || 10) : 10
+      const costSheet = calculateBatchCost(batchId, recipe, casesProduced)
+      cogsTotal.inc({ category: 'production' }, costSheet.totalCost)
+      console.log(`[calculate-batch-cost] ✓ batch=${batchId} totalCost=$${costSheet.totalCost} costPerCase=$${costSheet.costPerCase.toFixed(2)}`)
+      return job.complete({ ledgerEntryId: costSheet.batchId } as any)
     }),
   })
 
+  // 4. Record Shipping Cost (automation)
   zeebe.createWorker({
     taskType: 'record-shipping-cost',
     taskHandler: withMetrics('record-shipping-cost', 'automation', (job) => {
       const vars = job.variables as unknown as AccountingProcessVariables
-      const delivery = vars.delivery!
-      const cost = vars.amount || Math.floor(Math.random() * 100) + 50
-      const entry = recordShippingCost(delivery.shipmentId, cost)
-      cashBalance.set(factoryState.getAccountBalance('CASH'))
-      console.log(`[record-shipping-cost] \u2713 shipment=${delivery.shipmentId} amount=$${entry.amount}`)
+      const shipmentId = vars.correlationId
+      const cost = vars.delivery?.shippingCost || vars.amount || 150
+      const entry = recordShippingCost(shipmentId, cost)
+      cogsTotal.inc({ category: 'shipping' }, entry.amount)
+      cashBalance.dec(entry.amount)
+      console.log(`[record-shipping-cost] ✓ shipment=${shipmentId} amount=$${entry.amount} entry=${entry.entryId}`)
       return job.complete({ ledgerEntryId: entry.entryId } as any)
     }),
   })
