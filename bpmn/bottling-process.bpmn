@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Bottling" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
+  <bpmn:process id="bottling-process" name="Bottling Line Process" isExecutable="true">
+
+    <!-- START — BrewComplete message -->
+    <bpmn:startEvent id="Start_Bottling" name="Brew Complete">
+      <bpmn:outgoing>Flow_Start_to_Volume</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_BrewComplete">
+        <bpmn:extensionElements>
+          <zeebe:subscription correlationKey="= batchId" />
+        </bpmn:extensionElements>
+        <bpmn:messageRef>Message_BrewComplete</bpmn:messageRef>
+      </bpmn:messageEventDefinition>
+    </bpmn:startEvent>
+
+    <!-- 1. Volume Reading (automation) -->
+    <bpmn:serviceTask id="Task_VolumeReading" name="Volume Reading">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="volume-reading" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_Volume</bpmn:incoming>
+      <bpmn:outgoing>Flow_Volume_to_Label</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 2. Label Generation (LLM) -->
+    <bpmn:serviceTask id="Task_LabelGeneration" name="Label Generation (LLM)">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="label-generation" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Volume_to_Label</bpmn:incoming>
+      <bpmn:outgoing>Flow_Label_to_Filling</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 3. Filling Simulation (automation) -->
+    <bpmn:serviceTask id="Task_Filling" name="Bottle Filling">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="filling-simulation" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Label_to_Filling</bpmn:incoming>
+      <bpmn:outgoing>Flow_Filling_to_QS</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 4. Quality Sampling (automation) -->
+    <bpmn:serviceTask id="Task_QualitySampling" name="Quality Sampling">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="quality-sampling" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Filling_to_QS</bpmn:incoming>
+      <bpmn:outgoing>Flow_QS_to_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Quality Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_QualityPassed" name="Quality Passed?">
+      <bpmn:incoming>Flow_QS_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_QS_Pass</bpmn:outgoing>
+      <bpmn:outgoing>Flow_QS_Fail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_QS_Pass" name="Passed" sourceRef="Gateway_QualityPassed" targetRef="End_BottlesReady">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= qualitySample.overallPassed = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_QS_Fail" name="Failed" sourceRef="Gateway_QualityPassed" targetRef="Task_BrewmasterSamplingHold">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= qualitySample.overallPassed = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- Brewmaster Sampling Hold -->
+    <bpmn:userTask id="Task_BrewmasterSamplingHold" name="Brewmaster Sampling Hold">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_QS_Fail</bpmn:incoming>
+      <bpmn:outgoing>Flow_SamplingHold_to_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Brewmaster decision -->
+    <bpmn:exclusiveGateway id="Gateway_SamplingDecision" name="Release?">
+      <bpmn:incoming>Flow_SamplingHold_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sampling_Release</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Sampling_Dump</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_Sampling_Release" name="Release" sourceRef="Gateway_SamplingDecision" targetRef="End_BottlesReady">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= samplingDecision.released = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_Sampling_Dump" name="Dump" sourceRef="Gateway_SamplingDecision" targetRef="End_BottlingDumped">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= samplingDecision.released = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- END — Bottles Ready -->
+    <bpmn:endEvent id="End_BottlesReady" name="Bottles Ready">
+      <bpmn:incoming>Flow_QS_Pass</bpmn:incoming>
+      <bpmn:incoming>Flow_Sampling_Release</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_BottlesReady">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="bottles-ready-publish" />
+        </bpmn:extensionElements>
+      </bpmn:messageEventDefinition>
+    </bpmn:endEvent>
+
+    <!-- END — Dumped -->
+    <bpmn:endEvent id="End_BottlingDumped" name="Bottling Dumped">
+      <bpmn:incoming>Flow_Sampling_Dump</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="Flow_Start_to_Volume" sourceRef="Start_Bottling" targetRef="Task_VolumeReading" />
+    <bpmn:sequenceFlow id="Flow_Volume_to_Label" sourceRef="Task_VolumeReading" targetRef="Task_LabelGeneration" />
+    <bpmn:sequenceFlow id="Flow_Label_to_Filling" sourceRef="Task_LabelGeneration" targetRef="Task_Filling" />
+    <bpmn:sequenceFlow id="Flow_Filling_to_QS" sourceRef="Task_Filling" targetRef="Task_QualitySampling" />
+    <bpmn:sequenceFlow id="Flow_QS_to_Gateway" sourceRef="Task_QualitySampling" targetRef="Gateway_QualityPassed" />
+    <bpmn:sequenceFlow id="Flow_SamplingHold_to_Gateway" sourceRef="Task_BrewmasterSamplingHold" targetRef="Gateway_SamplingDecision" />
+
+  </bpmn:process>
+
+  <bpmn:message id="Message_BrewComplete" name="BrewComplete" />
+</bpmn:definitions>
