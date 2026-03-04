@@ -151,15 +151,10 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= brewmasterDecision.approved = false</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
 
-    <!-- END — Brew Complete (publishes message for bottling) -->
+    <!-- END — Brew Complete -->
     <bpmn:endEvent id="End_BrewComplete" name="Brew Complete">
       <bpmn:incoming>Flow_QC_Pass</bpmn:incoming>
       <bpmn:incoming>Flow_Approve_Override</bpmn:incoming>
-      <bpmn:messageEventDefinition id="MsgDef_BrewComplete">
-        <bpmn:extensionElements>
-          <zeebe:taskDefinition type="brew-complete-publish" />
-        </bpmn:extensionElements>
-      </bpmn:messageEventDefinition>
     </bpmn:endEvent>
 
     <!-- END — Batch Dumped (terminate) -->

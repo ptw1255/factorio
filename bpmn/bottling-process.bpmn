@@ -2,15 +2,9 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Bottling" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
   <bpmn:process id="bottling-process" name="Bottling Line Process" isExecutable="true">
 
-    <!-- START — BrewComplete message -->
-    <bpmn:startEvent id="Start_Bottling" name="Brew Complete">
+    <!-- START — manual or message trigger -->
+    <bpmn:startEvent id="Start_Bottling" name="Start Bottling">
       <bpmn:outgoing>Flow_Start_to_Volume</bpmn:outgoing>
-      <bpmn:messageEventDefinition id="MsgDef_BrewComplete">
-        <bpmn:extensionElements>
-          <zeebe:subscription correlationKey="= batchId" />
-        </bpmn:extensionElements>
-        <bpmn:messageRef>Message_BrewComplete</bpmn:messageRef>
-      </bpmn:messageEventDefinition>
     </bpmn:startEvent>
 
     <!-- 1. Volume Reading (automation) -->
@@ -92,11 +86,6 @@
     <bpmn:endEvent id="End_BottlesReady" name="Bottles Ready">
       <bpmn:incoming>Flow_QS_Pass</bpmn:incoming>
       <bpmn:incoming>Flow_Sampling_Release</bpmn:incoming>
-      <bpmn:messageEventDefinition id="MsgDef_BottlesReady">
-        <bpmn:extensionElements>
-          <zeebe:taskDefinition type="bottles-ready-publish" />
-        </bpmn:extensionElements>
-      </bpmn:messageEventDefinition>
     </bpmn:endEvent>
 
     <!-- END — Dumped -->
@@ -114,5 +103,4 @@
 
   </bpmn:process>
 
-  <bpmn:message id="Message_BrewComplete" name="BrewComplete" />
 </bpmn:definitions>

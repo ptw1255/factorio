@@ -2,15 +2,9 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Crating" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
   <bpmn:process id="crating-process" name="Crating &amp; Palletizing Process" isExecutable="true">
 
-    <!-- START — BottlesReady message -->
-    <bpmn:startEvent id="Start_Crating" name="Bottles Ready">
+    <!-- START — manual or message trigger -->
+    <bpmn:startEvent id="Start_Crating" name="Start Crating">
       <bpmn:outgoing>Flow_Start_to_Init</bpmn:outgoing>
-      <bpmn:messageEventDefinition id="MsgDef_BottlesReady">
-        <bpmn:extensionElements>
-          <zeebe:subscription correlationKey="= batchId" />
-        </bpmn:extensionElements>
-        <bpmn:messageRef>Message_BottlesReady</bpmn:messageRef>
-      </bpmn:messageEventDefinition>
     </bpmn:startEvent>
 
     <!-- 1. Initialize Line -->
@@ -148,11 +142,6 @@
     <!-- END — Pallets Ready -->
     <bpmn:endEvent id="End_PalletsReady" name="Pallets Ready">
       <bpmn:incoming>Flow_Join_to_End</bpmn:incoming>
-      <bpmn:messageEventDefinition id="MsgDef_PalletsReady">
-        <bpmn:extensionElements>
-          <zeebe:taskDefinition type="pallets-ready-publish" />
-        </bpmn:extensionElements>
-      </bpmn:messageEventDefinition>
     </bpmn:endEvent>
 
     <!-- SEQUENCE FLOWS -->
@@ -171,5 +160,4 @@
 
   </bpmn:process>
 
-  <bpmn:message id="Message_BottlesReady" name="BottlesReady" />
 </bpmn:definitions>
