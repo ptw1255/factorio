@@ -1,4 +1,4 @@
-import { ZBClient } from '@camunda8/sdk/dist/zeebe'
+import { ZeebeGrpcClient } from '@camunda8/sdk/dist/zeebe'
 import { calculateVolume } from '../automation/bottling/volume-reading'
 import { simulateFilling } from '../automation/bottling/filling'
 import { sampleQuality } from '../automation/bottling/quality-sampling'
@@ -25,7 +25,7 @@ function withMetrics<T>(
   }
 }
 
-export function registerBottlingWorkers(zeebe: ZBClient): void {
+export function registerBottlingWorkers(zeebe: ZeebeGrpcClient): void {
   // 1. Volume Reading
   zeebe.createWorker({
     taskType: 'volume-reading',

@@ -1,4 +1,4 @@
-import { ZBClient } from '@camunda8/sdk/dist/zeebe'
+import { ZeebeGrpcClient } from '@camunda8/sdk/dist/zeebe'
 import { simulateMash } from '../automation/brewing/mashing'
 import { simulateLauter } from '../automation/brewing/lautering'
 import { simulateBoil } from '../automation/brewing/boiling'
@@ -28,7 +28,7 @@ function withMetrics<T>(
   }
 }
 
-export function registerBrewingWorkers(zeebe: ZBClient): void {
+export function registerBrewingWorkers(zeebe: ZeebeGrpcClient): void {
   // 1. Mashing
   zeebe.createWorker({
     taskType: 'mashing',

@@ -1,4 +1,4 @@
-import { ZBClient } from '@camunda8/sdk/dist/zeebe'
+import { ZeebeGrpcClient } from '@camunda8/sdk/dist/zeebe'
 import { inspectBottleBatch } from '../automation/crating/inspection'
 import { initCasePackerArm, simulateCasePackingCycle } from '../automation/crating/case-packing'
 import { simulatePalletizing } from '../automation/crating/palletizing'
@@ -27,7 +27,7 @@ function withMetrics<T>(
   }
 }
 
-export function registerCratingWorkers(zeebe: ZBClient): void {
+export function registerCratingWorkers(zeebe: ZeebeGrpcClient): void {
   // 1. Line Initialize
   zeebe.createWorker({
     taskType: 'line-initialize',
