@@ -103,4 +103,174 @@
 
   </bpmn:process>
 
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Bottling">
+    <bpmndi:BPMNPlane id="BPMNPlane_Bottling" bpmnElement="bottling-process">
+
+      <!-- ═══════════════════════════════════════════════════════
+           SHAPES — main flow (Y centre = 200)
+           ═══════════════════════════════════════════════════════ -->
+
+      <!-- Start_Bottling: centre (118, 200) -->
+      <bpmndi:BPMNShape id="Shape_Start_Bottling" bpmnElement="Start_Bottling">
+        <dc:Bounds x="100" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="84" y="225" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_VolumeReading: x=196–296, y=160–240 (centre 246, 200) -->
+      <bpmndi:BPMNShape id="Shape_Task_VolumeReading" bpmnElement="Task_VolumeReading">
+        <dc:Bounds x="196" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_LabelGeneration: x=356–456, y=160–240 -->
+      <bpmndi:BPMNShape id="Shape_Task_LabelGeneration" bpmnElement="Task_LabelGeneration">
+        <dc:Bounds x="356" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Filling: x=516–616, y=160–240 -->
+      <bpmndi:BPMNShape id="Shape_Task_Filling" bpmnElement="Task_Filling">
+        <dc:Bounds x="516" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_QualitySampling: x=676–776, y=160–240 -->
+      <bpmndi:BPMNShape id="Shape_Task_QualitySampling" bpmnElement="Task_QualitySampling">
+        <dc:Bounds x="676" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_QualityPassed: x=836–886, y=175–225 (centre 861, 200) -->
+      <bpmndi:BPMNShape id="Shape_Gateway_QualityPassed" bpmnElement="Gateway_QualityPassed" isMarkerVisible="true">
+        <dc:Bounds x="836" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="820" y="132" width="82" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_BottlesReady: x=1076–1112, y=182–218 (centre 1094, 200) -->
+      <bpmndi:BPMNShape id="Shape_End_BottlesReady" bpmnElement="End_BottlesReady">
+        <dc:Bounds x="1076" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1058" y="225" width="72" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════════
+           SHAPES — fail path (Y centre = 350)
+           ═══════════════════════════════════════════════════════ -->
+
+      <!-- Task_BrewmasterSamplingHold: x=836–936, y=310–390 (centre 886, 350) -->
+      <bpmndi:BPMNShape id="Shape_Task_BrewmasterSamplingHold" bpmnElement="Task_BrewmasterSamplingHold">
+        <dc:Bounds x="836" y="310" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_SamplingDecision: x=996–1046, y=325–375 (centre 1021, 350) -->
+      <bpmndi:BPMNShape id="Shape_Gateway_SamplingDecision" bpmnElement="Gateway_SamplingDecision" isMarkerVisible="true">
+        <dc:Bounds x="996" y="325" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="999" y="382" width="44" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════════
+           SHAPES — dump path (Y centre = 450)
+           ═══════════════════════════════════════════════════════ -->
+
+      <!-- End_BottlingDumped: x=1003–1039, y=432–468 (centre 1021, 450) -->
+      <bpmndi:BPMNShape id="Shape_End_BottlingDumped" bpmnElement="End_BottlingDumped">
+        <dc:Bounds x="1003" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="980" y="475" width="82" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════════
+           EDGES — main flow (plain sequence flows)
+           ═══════════════════════════════════════════════════════ -->
+
+      <!-- Flow_Start_to_Volume: Start_Bottling (right 136,200) → Task_VolumeReading (left 196,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_to_Volume" bpmnElement="Flow_Start_to_Volume">
+        <di:waypoint x="136" y="200" />
+        <di:waypoint x="196" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Volume_to_Label: Task_VolumeReading (right 296,200) → Task_LabelGeneration (left 356,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Volume_to_Label" bpmnElement="Flow_Volume_to_Label">
+        <di:waypoint x="296" y="200" />
+        <di:waypoint x="356" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Label_to_Filling: Task_LabelGeneration (right 456,200) → Task_Filling (left 516,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Label_to_Filling" bpmnElement="Flow_Label_to_Filling">
+        <di:waypoint x="456" y="200" />
+        <di:waypoint x="516" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Filling_to_QS: Task_Filling (right 616,200) → Task_QualitySampling (left 676,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Filling_to_QS" bpmnElement="Flow_Filling_to_QS">
+        <di:waypoint x="616" y="200" />
+        <di:waypoint x="676" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_QS_to_Gateway: Task_QualitySampling (right 776,200) → Gateway_QualityPassed (left 836,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_QS_to_Gateway" bpmnElement="Flow_QS_to_Gateway">
+        <di:waypoint x="776" y="200" />
+        <di:waypoint x="836" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════════
+           EDGES — conditional flows from Gateway_QualityPassed
+           ═══════════════════════════════════════════════════════ -->
+
+      <!-- Flow_QS_Pass (Passed): Gateway_QualityPassed (right 886,200) → End_BottlesReady (left 1076,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_QS_Pass" bpmnElement="Flow_QS_Pass">
+        <di:waypoint x="886" y="200" />
+        <di:waypoint x="1076" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="964" y="182" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_QS_Fail (Failed): Gateway_QualityPassed (bottom 861,225) → Task_BrewmasterSamplingHold (top 886,310)
+           Drop straight down from gateway centre-x to task centre-x -->
+      <bpmndi:BPMNEdge id="Edge_Flow_QS_Fail" bpmnElement="Flow_QS_Fail">
+        <di:waypoint x="861" y="225" />
+        <di:waypoint x="861" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="868" y="258" width="33" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════════
+           EDGES — fail path continuation
+           ═══════════════════════════════════════════════════════ -->
+
+      <!-- Flow_SamplingHold_to_Gateway: Task_BrewmasterSamplingHold (right 936,350) → Gateway_SamplingDecision (left 996,350) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_SamplingHold_to_Gateway" bpmnElement="Flow_SamplingHold_to_Gateway">
+        <di:waypoint x="936" y="350" />
+        <di:waypoint x="996" y="350" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Sampling_Release (Release): Gateway_SamplingDecision (top 1021,325) → End_BottlesReady (bottom 1094,218)
+           Go up from gateway, then right to end event -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Sampling_Release" bpmnElement="Flow_Sampling_Release">
+        <di:waypoint x="1021" y="325" />
+        <di:waypoint x="1021" y="200" />
+        <di:waypoint x="1076" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1028" y="254" width="38" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Sampling_Dump (Dump): Gateway_SamplingDecision (bottom 1021,375) → End_BottlingDumped (top 1021,432) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Sampling_Dump" bpmnElement="Flow_Sampling_Dump">
+        <di:waypoint x="1021" y="375" />
+        <di:waypoint x="1021" y="432" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1028" y="400" width="27" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
 </bpmn:definitions>

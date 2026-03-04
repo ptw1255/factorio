@@ -177,4 +177,278 @@
     <bpmn:sequenceFlow id="Flow_QCHold_to_Gateway" sourceRef="Task_BrewmasterQCHold" targetRef="Gateway_BrewmasterDecision" />
 
   </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Brewing">
+    <bpmndi:BPMNPlane id="BPMNPlane_Brewing" bpmnElement="brewing-process">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SHAPES — Main line (Y=200 center)
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Start_Brewing: center (118, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_Start_Brewing" bpmnElement="Start_Brewing">
+        <dc:Bounds x="100" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="84" y="225" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Mashing: center (256, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_Mashing" bpmnElement="Task_Mashing">
+        <dc:Bounds x="206" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Lautering: center (416, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_Lautering" bpmnElement="Task_Lautering">
+        <dc:Bounds x="366" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Boiling: center (576, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_Boiling" bpmnElement="Task_Boiling">
+        <dc:Bounds x="526" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Cooling: center (736, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_Cooling" bpmnElement="Task_Cooling">
+        <dc:Bounds x="686" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_FermentationCheck: center (896, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_FermentationCheck" bpmnElement="Task_FermentationCheck">
+        <dc:Bounds x="846" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_FermComplete: center (1021, 200), 50x50 -->
+      <bpmndi:BPMNShape id="Shape_Gateway_FermComplete" bpmnElement="Gateway_FermComplete" isMarkerVisible="true">
+        <dc:Bounds x="996" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="968" y="232" width="106" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Lagering: center (1156, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_Lagering" bpmnElement="Task_Lagering">
+        <dc:Bounds x="1106" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_BatchQC: center (1316, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_BatchQC" bpmnElement="Task_BatchQC">
+        <dc:Bounds x="1266" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_QCPassed: center (1451, 200), 50x50 -->
+      <bpmndi:BPMNShape id="Shape_Gateway_QCPassed" bpmnElement="Gateway_QCPassed" isMarkerVisible="true">
+        <dc:Bounds x="1426" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1421" y="232" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_BrewComplete: center (1561, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_BrewComplete" bpmnElement="End_BrewComplete">
+        <dc:Bounds x="1543" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1523" y="225" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SHAPES — Fermentation loop (Y=350 center)
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Timer_FermWait: center (1003, 350), 36x36 — below Gateway_FermComplete -->
+      <bpmndi:BPMNShape id="Shape_Timer_FermWait" bpmnElement="Timer_FermWait">
+        <dc:Bounds x="985" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="958" y="375" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SHAPES — Stuck fermentation path (Y=450 center)
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Task_BrewmasterFermHold: center (1086, 450), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_BrewmasterFermHold" bpmnElement="Task_BrewmasterFermHold">
+        <dc:Bounds x="1036" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SHAPES — QC fail path (Y=350 center)
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Task_BrewmasterQCHold: center (1451, 350), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_BrewmasterQCHold" bpmnElement="Task_BrewmasterQCHold">
+        <dc:Bounds x="1401" y="310" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_BrewmasterDecision: center (1561, 350), 50x50 -->
+      <bpmndi:BPMNShape id="Shape_Gateway_BrewmasterDecision" bpmnElement="Gateway_BrewmasterDecision" isMarkerVisible="true">
+        <dc:Bounds x="1536" y="325" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1524" y="382" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_BatchDumped: center (1676, 350), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_BatchDumped" bpmnElement="End_BatchDumped">
+        <dc:Bounds x="1658" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1641" y="375" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           EDGES — Main line flows
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Flow_Start_to_Mashing: (118,200) → (206,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_to_Mashing" bpmnElement="Flow_Start_to_Mashing">
+        <di:waypoint x="136" y="200" />
+        <di:waypoint x="206" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Mashing_to_Lautering: (306,200) → (366,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Mashing_to_Lautering" bpmnElement="Flow_Mashing_to_Lautering">
+        <di:waypoint x="306" y="200" />
+        <di:waypoint x="366" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Lautering_to_Boiling: (466,200) → (526,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Lautering_to_Boiling" bpmnElement="Flow_Lautering_to_Boiling">
+        <di:waypoint x="466" y="200" />
+        <di:waypoint x="526" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Boiling_to_Cooling: (626,200) → (686,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Boiling_to_Cooling" bpmnElement="Flow_Boiling_to_Cooling">
+        <di:waypoint x="626" y="200" />
+        <di:waypoint x="686" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Cooling_to_FermCheck: (786,200) → (846,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Cooling_to_FermCheck" bpmnElement="Flow_Cooling_to_FermCheck">
+        <di:waypoint x="786" y="200" />
+        <di:waypoint x="846" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_FermCheck_to_Gateway: (946,200) → (996,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_FermCheck_to_Gateway" bpmnElement="Flow_FermCheck_to_Gateway">
+        <di:waypoint x="946" y="200" />
+        <di:waypoint x="996" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Ferm_Done: Gateway_FermComplete (1046,200) → Task_Lagering (1106,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Ferm_Done" bpmnElement="Flow_Ferm_Done">
+        <di:waypoint x="1046" y="200" />
+        <di:waypoint x="1106" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1055" y="182" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Lagering_to_QC: (1206,200) → (1266,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Lagering_to_QC" bpmnElement="Flow_Lagering_to_QC">
+        <di:waypoint x="1206" y="200" />
+        <di:waypoint x="1266" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_QC_to_Gateway: (1366,200) → (1426,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_QC_to_Gateway" bpmnElement="Flow_QC_to_Gateway">
+        <di:waypoint x="1366" y="200" />
+        <di:waypoint x="1426" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_QC_Pass: Gateway_QCPassed (1476,200) → End_BrewComplete (1543,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_QC_Pass" bpmnElement="Flow_QC_Pass">
+        <di:waypoint x="1476" y="200" />
+        <di:waypoint x="1543" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1488" y="182" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           EDGES — Fermentation loop (down to Y=350, back to FermCheck)
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Flow_Ferm_Continue: Gateway_FermComplete (1021,225) down to Timer_FermWait (1003,332) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Ferm_Continue" bpmnElement="Flow_Ferm_Continue">
+        <di:waypoint x="1021" y="225" />
+        <di:waypoint x="1021" y="280" />
+        <di:waypoint x="1003" y="280" />
+        <di:waypoint x="1003" y="332" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1025" y="252" width="46" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_FermLoop_Back: Timer_FermWait (985,350) → left → up → Task_FermentationCheck (846,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_FermLoop_Back" bpmnElement="Flow_FermLoop_Back">
+        <di:waypoint x="985" y="350" />
+        <di:waypoint x="896" y="350" />
+        <di:waypoint x="896" y="240" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           EDGES — Stuck fermentation path (down to Y=450)
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Flow_Ferm_Stuck: Gateway_FermComplete (1021,225) → down → right → Task_BrewmasterFermHold (1036,410) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Ferm_Stuck" bpmnElement="Flow_Ferm_Stuck">
+        <di:waypoint x="1021" y="225" />
+        <di:waypoint x="1021" y="450" />
+        <di:waypoint x="1036" y="450" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1026" y="330" width="30" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_FermHold_to_End: Task_BrewmasterFermHold (1136,450) → right → down → End_BatchDumped (1676,350) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_FermHold_to_End" bpmnElement="Flow_FermHold_to_End">
+        <di:waypoint x="1136" y="450" />
+        <di:waypoint x="1676" y="450" />
+        <di:waypoint x="1676" y="368" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           EDGES — QC fail path (down to Y=350)
+           ═══════════════════════════════════════════════════════════ -->
+
+      <!-- Flow_QC_Fail: Gateway_QCPassed (1451,225) → down → Task_BrewmasterQCHold (1451,310) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_QC_Fail" bpmnElement="Flow_QC_Fail">
+        <di:waypoint x="1451" y="225" />
+        <di:waypoint x="1451" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1456" y="260" width="33" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_QCHold_to_Gateway: Task_BrewmasterQCHold (1501,350) → Gateway_BrewmasterDecision (1536,350) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_QCHold_to_Gateway" bpmnElement="Flow_QCHold_to_Gateway">
+        <di:waypoint x="1501" y="350" />
+        <di:waypoint x="1536" y="350" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Dump_Batch: Gateway_BrewmasterDecision (1586,350) → End_BatchDumped (1658,350) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Dump_Batch" bpmnElement="Flow_Dump_Batch">
+        <di:waypoint x="1586" y="350" />
+        <di:waypoint x="1658" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1598" y="332" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Approve_Override: Gateway_BrewmasterDecision (1561,325) → up → End_BrewComplete (1561,218) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Approve_Override" bpmnElement="Flow_Approve_Override">
+        <di:waypoint x="1561" y="325" />
+        <di:waypoint x="1561" y="218" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1566" y="264" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
 </bpmn:definitions>

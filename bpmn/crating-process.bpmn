@@ -90,6 +90,7 @@
         <zeebe:taskDefinition type="palletizer-cycle" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_NoFault</bpmn:incoming>
+      <bpmn:incoming>Flow_Unstable</bpmn:incoming>
       <bpmn:outgoing>Flow_Palletizer_to_StabilityGateway</bpmn:outgoing>
     </bpmn:serviceTask>
 
@@ -159,5 +160,273 @@
     <bpmn:sequenceFlow id="Flow_Join_to_End" sourceRef="Gateway_MaintenanceJoin" targetRef="End_PalletsReady" />
 
   </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Crating">
+    <bpmndi:BPMNPlane id="BPMNPlane_Crating" bpmnElement="crating-process">
+
+      <!-- ═══════════════════════════════════════════════════
+           SHAPES — Main flow (Y=200 centerline)
+           ═══════════════════════════════════════════════════ -->
+
+      <!-- Start_Crating: center (98, 200) -->
+      <bpmndi:BPMNShape id="Shape_Start_Crating" bpmnElement="Start_Crating">
+        <dc:Bounds x="80" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="63" y="225" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_LineInit: center (216, 200) -->
+      <bpmndi:BPMNShape id="Shape_Task_LineInit" bpmnElement="Task_LineInit">
+        <dc:Bounds x="166" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_BottleInspect: center (376, 200) -->
+      <bpmndi:BPMNShape id="Shape_Task_BottleInspect" bpmnElement="Task_BottleInspect">
+        <dc:Bounds x="326" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_ReviewNeeded: center (511, 200) -->
+      <bpmndi:BPMNShape id="Shape_Gateway_ReviewNeeded" bpmnElement="Gateway_ReviewNeeded" isMarkerVisible="true">
+        <dc:Bounds x="486" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="469" y="232" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_CasePacker: center (696, 200) -->
+      <bpmndi:BPMNShape id="Shape_Task_CasePacker" bpmnElement="Task_CasePacker">
+        <dc:Bounds x="646" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_CasePackerFault: center (806, 200) — moved right to accommodate CasePacker -->
+      <bpmndi:BPMNShape id="Shape_Gateway_CasePackerFault" bpmnElement="Gateway_CasePackerFault" isMarkerVisible="true">
+        <dc:Bounds x="796" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="786" y="232" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Palletizer: center (976, 200) -->
+      <bpmndi:BPMNShape id="Shape_Task_Palletizer" bpmnElement="Task_Palletizer">
+        <dc:Bounds x="926" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_Stability: center (1086, 200) -->
+      <bpmndi:BPMNShape id="Shape_Gateway_Stability" bpmnElement="Gateway_Stability" isMarkerVisible="true">
+        <dc:Bounds x="1061" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1044" y="232" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_PalletWrap: center (1246, 200) -->
+      <bpmndi:BPMNShape id="Shape_Task_PalletWrap" bpmnElement="Task_PalletWrap">
+        <dc:Bounds x="1196" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_MaintenanceFork: center (1356, 200) -->
+      <bpmndi:BPMNShape id="Shape_Gateway_MaintenanceFork" bpmnElement="Gateway_MaintenanceFork">
+        <dc:Bounds x="1331" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1311" y="232" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_MaintenanceJoin: center (1516, 200) -->
+      <bpmndi:BPMNShape id="Shape_Gateway_MaintenanceJoin" bpmnElement="Gateway_MaintenanceJoin">
+        <dc:Bounds x="1491" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1471" y="232" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_PalletsReady: center (1634, 200) -->
+      <bpmndi:BPMNShape id="Shape_End_PalletsReady" bpmnElement="End_PalletsReady">
+        <dc:Bounds x="1616" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1599" y="225" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════
+           SHAPES — Below-path elements (Y=350 centerline)
+           ═══════════════════════════════════════════════════ -->
+
+      <!-- Task_VisionReview: center (511, 350), below Gateway_ReviewNeeded -->
+      <bpmndi:BPMNShape id="Shape_Task_VisionReview" bpmnElement="Task_VisionReview">
+        <dc:Bounds x="461" y="310" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_ArmRecovery: center (821, 350), below Gateway_CasePackerFault -->
+      <bpmndi:BPMNShape id="Shape_Task_ArmRecovery" bpmnElement="Task_ArmRecovery">
+        <dc:Bounds x="771" y="310" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_PredictiveMaint: center (1356, 350), below Gateway_MaintenanceFork -->
+      <bpmndi:BPMNShape id="Shape_Task_PredictiveMaint" bpmnElement="Task_PredictiveMaint">
+        <dc:Bounds x="1306" y="310" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- ═══════════════════════════════════════════════════
+           EDGES — Main flow (left-to-right, Y=200)
+           ═══════════════════════════════════════════════════ -->
+
+      <!-- Flow_Start_to_Init: Start_Crating (98,200) → Task_LineInit (166,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_to_Init" bpmnElement="Flow_Start_to_Init">
+        <di:waypoint x="116" y="200" />
+        <di:waypoint x="166" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Init_to_Inspect: Task_LineInit (266,200) → Task_BottleInspect (326,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Init_to_Inspect" bpmnElement="Flow_Init_to_Inspect">
+        <di:waypoint x="266" y="200" />
+        <di:waypoint x="326" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Inspect_to_ReviewGateway: Task_BottleInspect (426,200) → Gateway_ReviewNeeded (486,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Inspect_to_ReviewGateway" bpmnElement="Flow_Inspect_to_ReviewGateway">
+        <di:waypoint x="426" y="200" />
+        <di:waypoint x="486" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_NoReview: Gateway_ReviewNeeded (536,200) → Task_CasePacker (646,200) — main line, skip below path -->
+      <bpmndi:BPMNEdge id="Edge_Flow_NoReview" bpmnElement="Flow_NoReview">
+        <di:waypoint x="536" y="200" />
+        <di:waypoint x="646" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="563" y="182" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_CasePacker_to_Gateway: Task_CasePacker (746,200) → Gateway_CasePackerFault (796,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_CasePacker_to_Gateway" bpmnElement="Flow_CasePacker_to_Gateway">
+        <di:waypoint x="746" y="200" />
+        <di:waypoint x="796" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_NoFault: Gateway_CasePackerFault (846,200) → Task_Palletizer (926,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_NoFault" bpmnElement="Flow_NoFault">
+        <di:waypoint x="846" y="200" />
+        <di:waypoint x="926" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="860" y="182" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Palletizer_to_StabilityGateway: Task_Palletizer (1026,200) → Gateway_Stability (1061,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Palletizer_to_StabilityGateway" bpmnElement="Flow_Palletizer_to_StabilityGateway">
+        <di:waypoint x="1026" y="200" />
+        <di:waypoint x="1061" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Stable: Gateway_Stability (1111,200) → Task_PalletWrap (1196,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Stable" bpmnElement="Flow_Stable">
+        <di:waypoint x="1111" y="200" />
+        <di:waypoint x="1196" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1128" y="182" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Wrap_to_Fork: Task_PalletWrap (1296,200) → Gateway_MaintenanceFork (1331,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Wrap_to_Fork" bpmnElement="Flow_Wrap_to_Fork">
+        <di:waypoint x="1296" y="200" />
+        <di:waypoint x="1331" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_To_End: Gateway_MaintenanceFork (1381,200) → Gateway_MaintenanceJoin (1491,200) — upper parallel path -->
+      <bpmndi:BPMNEdge id="Edge_Flow_To_End" bpmnElement="Flow_To_End">
+        <di:waypoint x="1381" y="200" />
+        <di:waypoint x="1491" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Join_to_End: Gateway_MaintenanceJoin (1541,200) → End_PalletsReady (1616,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Join_to_End" bpmnElement="Flow_Join_to_End">
+        <di:waypoint x="1541" y="200" />
+        <di:waypoint x="1616" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════
+           EDGES — Vision Review detour (down to Y=350, back up)
+           ═══════════════════════════════════════════════════ -->
+
+      <!-- Flow_NeedsReview: Gateway_ReviewNeeded (511,225) → Task_VisionReview (511,310)
+           Drop straight down from gateway south point -->
+      <bpmndi:BPMNEdge id="Edge_Flow_NeedsReview" bpmnElement="Flow_NeedsReview">
+        <di:waypoint x="511" y="225" />
+        <di:waypoint x="511" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="516" y="260" width="62" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Review_to_CasePacker: Task_VisionReview (561,350) → Task_CasePacker (696,350→200)
+           Exit right from VisionReview, travel right to CasePacker x-center, then up -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Review_to_CasePacker" bpmnElement="Flow_Review_to_CasePacker">
+        <di:waypoint x="561" y="350" />
+        <di:waypoint x="696" y="350" />
+        <di:waypoint x="696" y="240" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════
+           EDGES — Arm Recovery loop (down to Y=350, back left to CasePacker)
+           ═══════════════════════════════════════════════════ -->
+
+      <!-- Flow_HasFault: Gateway_CasePackerFault (821,225) → Task_ArmRecovery (821,310)
+           Drop straight down from gateway south point -->
+      <bpmndi:BPMNEdge id="Edge_Flow_HasFault" bpmnElement="Flow_HasFault">
+        <di:waypoint x="821" y="225" />
+        <di:waypoint x="821" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="826" y="260" width="28" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Recovery_to_CasePacker: Task_ArmRecovery (771,350) → Task_CasePacker (696,350→240)
+           Exit left from ArmRecovery, travel left to CasePacker x-center, then up -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Recovery_to_CasePacker" bpmnElement="Flow_Recovery_to_CasePacker">
+        <di:waypoint x="771" y="350" />
+        <di:waypoint x="696" y="350" />
+        <di:waypoint x="696" y="240" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════
+           EDGES — Unstable loop (down to Y=350, back left to Palletizer)
+           ═══════════════════════════════════════════════════ -->
+
+      <!-- Flow_Unstable: Gateway_Stability (1086,225) → Task_Palletizer (976,350→200)
+           Drop down from gateway south, go left below Palletizer, go up into Palletizer bottom -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Unstable" bpmnElement="Flow_Unstable">
+        <di:waypoint x="1086" y="225" />
+        <di:waypoint x="1086" y="350" />
+        <di:waypoint x="976" y="350" />
+        <di:waypoint x="976" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1016" y="356" width="44" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- ═══════════════════════════════════════════════════
+           EDGES — Predictive Maintenance parallel path (down to Y=350)
+           ═══════════════════════════════════════════════════ -->
+
+      <!-- Flow_To_Maintenance: Gateway_MaintenanceFork (1356,225) → Task_PredictiveMaint (1356,310)
+           Drop straight down from fork south point -->
+      <bpmndi:BPMNEdge id="Edge_Flow_To_Maintenance" bpmnElement="Flow_To_Maintenance">
+        <di:waypoint x="1356" y="225" />
+        <di:waypoint x="1356" y="310" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Maint_to_Join: Task_PredictiveMaint (1406,350) → Gateway_MaintenanceJoin (1516,225)
+           Exit right from PredictiveMaint, travel right to join x-center, then up -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Maint_to_Join" bpmnElement="Flow_Maint_to_Join">
+        <di:waypoint x="1406" y="350" />
+        <di:waypoint x="1516" y="350" />
+        <di:waypoint x="1516" y="225" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
 
 </bpmn:definitions>
