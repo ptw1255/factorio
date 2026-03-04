@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Crating" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
+  <bpmn:process id="crating-process" name="Crating &amp; Palletizing Process" isExecutable="true">
+
+    <!-- START — BottlesReady message -->
+    <bpmn:startEvent id="Start_Crating" name="Bottles Ready">
+      <bpmn:outgoing>Flow_Start_to_Init</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_BottlesReady">
+        <bpmn:extensionElements>
+          <zeebe:subscription correlationKey="= batchId" />
+        </bpmn:extensionElements>
+        <bpmn:messageRef>Message_BottlesReady</bpmn:messageRef>
+      </bpmn:messageEventDefinition>
+    </bpmn:startEvent>
+
+    <!-- 1. Initialize Line -->
+    <bpmn:serviceTask id="Task_LineInit" name="Initialize Line">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="line-initialize" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_Init</bpmn:incoming>
+      <bpmn:outgoing>Flow_Init_to_Inspect</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 2. Bottle Inspection -->
+    <bpmn:serviceTask id="Task_BottleInspect" name="Bottle Inspection">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="bottle-inspect" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Init_to_Inspect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Inspect_to_ReviewGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Inspection Review Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_ReviewNeeded" name="Review Needed?">
+      <bpmn:incoming>Flow_Inspect_to_ReviewGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_NoReview</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NeedsReview</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_NoReview" name="No Review" sourceRef="Gateway_ReviewNeeded" targetRef="Task_CasePacker">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= inspectionResult.review = 0</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_NeedsReview" name="Has Reviews" sourceRef="Gateway_ReviewNeeded" targetRef="Task_VisionReview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= inspectionResult.review &gt; 0</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- 3. Vision Review (LLM) -->
+    <bpmn:serviceTask id="Task_VisionReview" name="Vision Review (LLM)">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="vision-review" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_NeedsReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_Review_to_CasePacker</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 4. Case Packer -->
+    <bpmn:serviceTask id="Task_CasePacker" name="Case Packer Cycle">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="case-packer-cycle" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_NoReview</bpmn:incoming>
+      <bpmn:incoming>Flow_Review_to_CasePacker</bpmn:incoming>
+      <bpmn:incoming>Flow_Recovery_to_CasePacker</bpmn:incoming>
+      <bpmn:outgoing>Flow_CasePacker_to_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Case Packer Fault Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_CasePackerFault" name="Arm Fault?">
+      <bpmn:incoming>Flow_CasePacker_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_NoFault</bpmn:outgoing>
+      <bpmn:outgoing>Flow_HasFault</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_NoFault" name="No Fault" sourceRef="Gateway_CasePackerFault" targetRef="Task_Palletizer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= casePackerFault = null</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_HasFault" name="Fault" sourceRef="Gateway_CasePackerFault" targetRef="Task_ArmRecovery">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= casePackerFault != null</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- 5. Arm Recovery -->
+    <bpmn:serviceTask id="Task_ArmRecovery" name="Arm Recovery">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="arm-recovery" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_HasFault</bpmn:incoming>
+      <bpmn:outgoing>Flow_Recovery_to_CasePacker</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 6. Palletizer -->
+    <bpmn:serviceTask id="Task_Palletizer" name="Palletizer Cycle">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="palletizer-cycle" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_NoFault</bpmn:incoming>
+      <bpmn:outgoing>Flow_Palletizer_to_StabilityGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Stability Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_Stability" name="Pallet Stable?">
+      <bpmn:incoming>Flow_Palletizer_to_StabilityGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Stable</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Unstable</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_Stable" name="Stable" sourceRef="Gateway_Stability" targetRef="Task_PalletWrap">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= palletResult.stable = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_Unstable" name="Unstable" sourceRef="Gateway_Stability" targetRef="Task_Palletizer">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= palletResult.stable = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- 7. Pallet Wrap & Stage -->
+    <bpmn:serviceTask id="Task_PalletWrap" name="Pallet Wrap &amp; Stage">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="pallet-wrap-stage" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Stable</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wrap_to_Fork</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Parallel: predictive maintenance runs alongside completion -->
+    <bpmn:parallelGateway id="Gateway_MaintenanceFork">
+      <bpmn:incoming>Flow_Wrap_to_Fork</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Maintenance</bpmn:outgoing>
+      <bpmn:outgoing>Flow_To_End</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- 8. Predictive Maintenance (LLM) -->
+    <bpmn:serviceTask id="Task_PredictiveMaint" name="Predictive Maintenance (LLM)">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="predictive-maintenance" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_To_Maintenance</bpmn:incoming>
+      <bpmn:outgoing>Flow_Maint_to_Join</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:parallelGateway id="Gateway_MaintenanceJoin">
+      <bpmn:incoming>Flow_Maint_to_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_To_End</bpmn:incoming>
+      <bpmn:outgoing>Flow_Join_to_End</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- END — Pallets Ready -->
+    <bpmn:endEvent id="End_PalletsReady" name="Pallets Ready">
+      <bpmn:incoming>Flow_Join_to_End</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_PalletsReady">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="pallets-ready-publish" />
+        </bpmn:extensionElements>
+      </bpmn:messageEventDefinition>
+    </bpmn:endEvent>
+
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="Flow_Start_to_Init" sourceRef="Start_Crating" targetRef="Task_LineInit" />
+    <bpmn:sequenceFlow id="Flow_Init_to_Inspect" sourceRef="Task_LineInit" targetRef="Task_BottleInspect" />
+    <bpmn:sequenceFlow id="Flow_Inspect_to_ReviewGateway" sourceRef="Task_BottleInspect" targetRef="Gateway_ReviewNeeded" />
+    <bpmn:sequenceFlow id="Flow_Review_to_CasePacker" sourceRef="Task_VisionReview" targetRef="Task_CasePacker" />
+    <bpmn:sequenceFlow id="Flow_CasePacker_to_Gateway" sourceRef="Task_CasePacker" targetRef="Gateway_CasePackerFault" />
+    <bpmn:sequenceFlow id="Flow_Recovery_to_CasePacker" sourceRef="Task_ArmRecovery" targetRef="Task_CasePacker" />
+    <bpmn:sequenceFlow id="Flow_Palletizer_to_StabilityGateway" sourceRef="Task_Palletizer" targetRef="Gateway_Stability" />
+    <bpmn:sequenceFlow id="Flow_Wrap_to_Fork" sourceRef="Task_PalletWrap" targetRef="Gateway_MaintenanceFork" />
+    <bpmn:sequenceFlow id="Flow_To_Maintenance" sourceRef="Gateway_MaintenanceFork" targetRef="Task_PredictiveMaint" />
+    <bpmn:sequenceFlow id="Flow_To_End" sourceRef="Gateway_MaintenanceFork" targetRef="Gateway_MaintenanceJoin" />
+    <bpmn:sequenceFlow id="Flow_Maint_to_Join" sourceRef="Task_PredictiveMaint" targetRef="Gateway_MaintenanceJoin" />
+    <bpmn:sequenceFlow id="Flow_Join_to_End" sourceRef="Gateway_MaintenanceJoin" targetRef="End_PalletsReady" />
+
+  </bpmn:process>
+
+  <bpmn:message id="Message_BottlesReady" name="BottlesReady" />
+</bpmn:definitions>
