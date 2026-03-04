@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  id="Definitions_FactoryOverview"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="Claude Code" exporterVersion="1.0.0">
+
+  <!-- ===================================================================
+       COLLABORATION — 7 pools with 9 message flows
+       =================================================================== -->
+  <bpmn:collaboration id="Collaboration_Factory">
+
+    <!-- Pools -->
+    <bpmn:participant id="Pool_Sales" name="Sales Process — Timer-driven order generation (every 30s)" processRef="Process_Sales" />
+    <bpmn:participant id="Pool_Materials" name="Materials Management — Procurement &amp; inventory" processRef="Process_Materials" />
+    <bpmn:participant id="Pool_Brewing" name="Brewing Process — Mashing → Fermenting → Lagering → QC" processRef="Process_Brewing" />
+    <bpmn:participant id="Pool_Bottling" name="Bottling Process — Fill → Label → Quality Sample" processRef="Process_Bottling" />
+    <bpmn:participant id="Pool_Crating" name="Crating Process — Inspect → Pack → Palletize → Wrap" processRef="Process_Crating" />
+    <bpmn:participant id="Pool_Distribution" name="Distribution — Route → Load → Dispatch → Deliver" processRef="Process_Distribution" />
+    <bpmn:participant id="Pool_Accounting" name="Accounting — Double-entry ledger (Revenue, COGS, Shipping)" processRef="Process_Accounting" />
+
+    <!-- Message Flows — the cross-process communication chain -->
+    <bpmn:messageFlow id="MF_OrderPlaced" name="OrderPlaced" sourceRef="Pool_Sales" targetRef="Pool_Accounting" />
+    <bpmn:messageFlow id="MF_ProductionNeeded" name="ProductionNeeded" sourceRef="Pool_Sales" targetRef="Pool_Materials" />
+    <bpmn:messageFlow id="MF_MaterialsPurchased" name="MaterialsPurchased" sourceRef="Pool_Materials" targetRef="Pool_Accounting" />
+    <bpmn:messageFlow id="MF_MaterialsReady" name="MaterialsReady" sourceRef="Pool_Materials" targetRef="Pool_Brewing" />
+    <bpmn:messageFlow id="MF_BrewComplete_Bottling" name="BrewComplete" sourceRef="Pool_Brewing" targetRef="Pool_Bottling" />
+    <bpmn:messageFlow id="MF_BrewComplete_Acct" name="BrewComplete" sourceRef="Pool_Brewing" targetRef="Pool_Accounting" />
+    <bpmn:messageFlow id="MF_BottlesReady" name="BottlesReady" sourceRef="Pool_Bottling" targetRef="Pool_Crating" />
+    <bpmn:messageFlow id="MF_PalletsReady" name="PalletsReady" sourceRef="Pool_Crating" targetRef="Pool_Distribution" />
+    <bpmn:messageFlow id="MF_DeliveryComplete" name="DeliveryComplete" sourceRef="Pool_Distribution" targetRef="Pool_Accounting" />
+  </bpmn:collaboration>
+
+  <!-- Empty process stubs (collapsed pools don't need contents) -->
+  <bpmn:process id="Process_Sales" isExecutable="false" />
+  <bpmn:process id="Process_Materials" isExecutable="false" />
+  <bpmn:process id="Process_Brewing" isExecutable="false" />
+  <bpmn:process id="Process_Bottling" isExecutable="false" />
+  <bpmn:process id="Process_Crating" isExecutable="false" />
+  <bpmn:process id="Process_Distribution" isExecutable="false" />
+  <bpmn:process id="Process_Accounting" isExecutable="false" />
+
+  <!-- ===================================================================
+       DIAGRAM LAYOUT
+
+       Left column: Production chain (6 pools stacked vertically)
+       Right column: Accounting (tall pool spanning full height)
+
+       Production chain:
+         Sales         y=80
+         Materials     y=220
+         Brewing       y=360
+         Bottling      y=500
+         Crating       y=640
+         Distribution  y=780
+
+       Accounting:     y=80, height=760
+       =================================================================== -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Overview">
+    <bpmndi:BPMNPlane id="BPMNPlane_Overview" bpmnElement="Collaboration_Factory">
+
+      <!-- ============== POOL SHAPES ============== -->
+
+      <!-- Sales — top of left column -->
+      <bpmndi:BPMNShape id="Shape_Pool_Sales" bpmnElement="Pool_Sales" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="550" height="60" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Materials -->
+      <bpmndi:BPMNShape id="Shape_Pool_Materials" bpmnElement="Pool_Materials" isHorizontal="true">
+        <dc:Bounds x="160" y="220" width="550" height="60" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Brewing -->
+      <bpmndi:BPMNShape id="Shape_Pool_Brewing" bpmnElement="Pool_Brewing" isHorizontal="true">
+        <dc:Bounds x="160" y="360" width="550" height="60" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Bottling -->
+      <bpmndi:BPMNShape id="Shape_Pool_Bottling" bpmnElement="Pool_Bottling" isHorizontal="true">
+        <dc:Bounds x="160" y="500" width="550" height="60" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Crating -->
+      <bpmndi:BPMNShape id="Shape_Pool_Crating" bpmnElement="Pool_Crating" isHorizontal="true">
+        <dc:Bounds x="160" y="640" width="550" height="60" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Distribution -->
+      <bpmndi:BPMNShape id="Shape_Pool_Distribution" bpmnElement="Pool_Distribution" isHorizontal="true">
+        <dc:Bounds x="160" y="780" width="550" height="60" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Accounting — right column, full height -->
+      <bpmndi:BPMNShape id="Shape_Pool_Accounting" bpmnElement="Pool_Accounting" isHorizontal="true">
+        <dc:Bounds x="850" y="80" width="300" height="760" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- ============== MESSAGE FLOW EDGES ============== -->
+
+      <!-- Sales → Materials: ProductionNeeded (down) -->
+      <bpmndi:BPMNEdge id="Edge_MF_ProductionNeeded" bpmnElement="MF_ProductionNeeded">
+        <di:waypoint x="350" y="140" />
+        <di:waypoint x="350" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="170" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Sales → Accounting: OrderPlaced (right) -->
+      <bpmndi:BPMNEdge id="Edge_MF_OrderPlaced" bpmnElement="MF_OrderPlaced">
+        <di:waypoint x="710" y="110" />
+        <di:waypoint x="850" y="110" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="750" y="92" width="62" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Materials → Brewing: MaterialsReady (down) -->
+      <bpmndi:BPMNEdge id="Edge_MF_MaterialsReady" bpmnElement="MF_MaterialsReady">
+        <di:waypoint x="350" y="280" />
+        <di:waypoint x="350" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="310" width="78" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Materials → Accounting: MaterialsPurchased (right) -->
+      <bpmndi:BPMNEdge id="Edge_MF_MaterialsPurchased" bpmnElement="MF_MaterialsPurchased">
+        <di:waypoint x="710" y="250" />
+        <di:waypoint x="850" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="738" y="232" width="96" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Brewing → Bottling: BrewComplete (down) -->
+      <bpmndi:BPMNEdge id="Edge_MF_BrewComplete_Bottling" bpmnElement="MF_BrewComplete_Bottling">
+        <di:waypoint x="350" y="420" />
+        <di:waypoint x="350" y="500" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="450" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Brewing → Accounting: BrewComplete (right) -->
+      <bpmndi:BPMNEdge id="Edge_MF_BrewComplete_Acct" bpmnElement="MF_BrewComplete_Acct">
+        <di:waypoint x="710" y="390" />
+        <di:waypoint x="850" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="738" y="372" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Bottling → Crating: BottlesReady (down) -->
+      <bpmndi:BPMNEdge id="Edge_MF_BottlesReady" bpmnElement="MF_BottlesReady">
+        <di:waypoint x="350" y="560" />
+        <di:waypoint x="350" y="640" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="590" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Crating → Distribution: PalletsReady (down) -->
+      <bpmndi:BPMNEdge id="Edge_MF_PalletsReady" bpmnElement="MF_PalletsReady">
+        <di:waypoint x="350" y="700" />
+        <di:waypoint x="350" y="780" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="730" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Distribution → Accounting: DeliveryComplete (right) -->
+      <bpmndi:BPMNEdge id="Edge_MF_DeliveryComplete" bpmnElement="MF_DeliveryComplete">
+        <di:waypoint x="710" y="810" />
+        <di:waypoint x="850" y="810" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="730" y="792" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
