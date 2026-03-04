@@ -75,6 +75,9 @@ export function registerSalesWorkers(zeebe: ZeebeGrpcClient): void {
       const vars = job.variables as unknown as SalesProcessVariables
       const quantity = vars.order?.quantity || 0
       const allocation = allocateOrder(vars.orderId, vars.recipeId, quantity, vars.fulfillmentStatus || 'BACKORDER')
+      if (vars.fulfillmentStatus === 'FULFILL') {
+        factoryState.fulfillOrder(vars.orderId)
+      }
       ordersTotal.inc({ priority: vars.order?.priority || 'standard', fulfillment: vars.fulfillmentStatus || 'BACKORDER' })
       if (allocation.allocated > 0) {
         const pricePerCase = parkersKolsch.pricing.basePricePerCase

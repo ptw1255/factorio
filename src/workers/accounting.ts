@@ -67,7 +67,7 @@ export function registerAccountingWorkers(zeebe: ZeebeGrpcClient): void {
       const vars = job.variables as unknown as AccountingProcessVariables
       const batchId = vars.correlationId
       const recipe = parkersKolsch
-      const casesProduced = vars.batch?.costPerCase ? Math.round(vars.amount || 10) : 10
+      const casesProduced = vars.amount ? Math.round(vars.amount) : 10
       const costSheet = calculateBatchCost(batchId, recipe, casesProduced)
       cogsTotal.inc({ category: 'production' }, costSheet.totalCost)
       console.log(`[calculate-batch-cost] ✓ batch=${batchId} totalCost=$${costSheet.totalCost} costPerCase=$${costSheet.costPerCase.toFixed(2)}`)
