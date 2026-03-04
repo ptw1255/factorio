@@ -6,87 +6,66 @@ import { SalesProcessVariables } from '../types/sales-variables'
 import { parkersKolsch } from '../recipes/parkers-kolsch'
 import { factoryState } from '../state'
 import { generateId } from '../types/shared'
-import { workerDuration, stepCount, ordersTotal, revenueTotal } from '../metrics/index'
+import { withTelemetry } from '../telemetry/with-telemetry'
+import { createWorkerLogger } from '../telemetry/logger'
+import { ordersTotal, revenueTotal } from '../telemetry/metrics'
 
-function withMetrics<T>(
-  workerName: string,
-  workerType: 'llm' | 'automation',
-  handler: (job: any) => T
-): (job: any) => T {
-  return (job) => {
-    const end = workerDuration.startTimer({ worker: workerName, type: workerType })
-    stepCount.inc({ worker: workerName, type: workerType })
-    const result = handler(job)
-    if (result && typeof (result as any).then === 'function') {
-      return (result as any)
-        .then((res: any) => { end(); return res })
-        .catch((err: any) => { end(); throw err }) as T
-    }
-    end()
-    return result
-  }
-}
+const log = createWorkerLogger('sales', 'sales')
 
 export function registerSalesWorkers(zeebe: ZeebeGrpcClient): void {
-  // 1. Generate Order (LLM)
   zeebe.createWorker({
     taskType: 'generate-order',
     timeout: 60000,
-    taskHandler: withMetrics('generate-order', 'llm', async (job) => {
+    taskHandler: withTelemetry('sales', 'generate-order', 'llm', async (job) => {
       const vars = job.variables as unknown as SalesProcessVariables
       const recipeId = vars.recipeId || parkersKolsch.id
       const recipeName = vars.recipe?.name || parkersKolsch.name
+      const goLog = log.child({ worker: 'generate-order' })
       try {
         const order = await generateOrderAgent(recipeId, recipeName)
         const orderId = generateId('ORD')
         factoryState.addOrder({
-          orderId,
-          recipeId,
-          quantity: order.quantity,
-          customerId: order.customerId,
-          customerName: order.customerName,
-          deliveryAddress: order.deliveryAddress,
-          priority: order.priority,
+          orderId, recipeId, quantity: order.quantity,
+          customerId: order.customerId, customerName: order.customerName,
+          deliveryAddress: order.deliveryAddress, priority: order.priority,
         })
-        console.log(`[generate-order] ✓ order=${orderId} customer="${order.customerName}" qty=${order.quantity} priority=${order.priority}`)
+        goLog.info({ orderId, customer: order.customerName, qty: order.quantity, priority: order.priority }, 'order generated')
         return job.complete({ orderId, order, recipeId, recipe: parkersKolsch } as any)
       } catch (err) {
-        console.error(`[generate-order] ✗ error:`, err)
+        goLog.error({ err }, 'order generation failed')
         throw err
       }
     }),
   })
 
-  // 2. Validate Order (automation)
   zeebe.createWorker({
     taskType: 'validate-order',
-    taskHandler: withMetrics('validate-order', 'automation', (job) => {
+    taskHandler: withTelemetry('sales', 'validate-order', 'automation', (job) => {
       const vars = job.variables as unknown as SalesProcessVariables
       const validation = validateOrder(vars.recipeId, vars.order?.quantity || 0)
-      console.log(`[validate-order] ✓ order=${vars.orderId} status=${validation.status} available=${validation.available} requested=${validation.requested}`)
+      log.child({ worker: 'validate-order' }).info({ orderId: vars.orderId, status: validation.status, available: validation.available, requested: validation.requested }, 'order validated')
       return job.complete({ fulfillmentStatus: validation.status } as any)
     }),
   })
 
-  // 3. Order Allocation (automation)
   zeebe.createWorker({
     taskType: 'order-allocation',
-    taskHandler: withMetrics('order-allocation', 'automation', (job) => {
+    taskHandler: withTelemetry('sales', 'order-allocation', 'automation', (job) => {
       const vars = job.variables as unknown as SalesProcessVariables
       const quantity = vars.order?.quantity || 0
       const allocation = allocateOrder(vars.orderId, vars.recipeId, quantity, vars.fulfillmentStatus || 'BACKORDER')
       if (vars.fulfillmentStatus === 'FULFILL') {
         factoryState.fulfillOrder(vars.orderId)
       }
-      ordersTotal.inc({ priority: vars.order?.priority || 'standard', fulfillment: vars.fulfillmentStatus || 'BACKORDER' })
+      ordersTotal.add(1, { priority: vars.order?.priority || 'standard', fulfillment: vars.fulfillmentStatus || 'BACKORDER' })
       if (allocation.allocated > 0) {
         const pricePerCase = parkersKolsch.pricing.basePricePerCase
-        revenueTotal.inc({ recipe: vars.recipeId }, allocation.allocated * pricePerCase)
+        revenueTotal.add(allocation.allocated * pricePerCase, { recipe: vars.recipeId })
       }
-      console.log(`[order-allocation] ✓ order=${vars.orderId} allocated=${allocation.allocated} backordered=${allocation.backordered}`)
+      log.child({ worker: 'order-allocation' }).info({ orderId: vars.orderId, allocated: allocation.allocated, backordered: allocation.backordered }, 'order allocated')
       return job.complete({ allocationResult: allocation } as any)
     }),
   })
 
-  console.log('[sales] 3 workers registered: generate-order, validate-order, order-allocation')
+  log.info('3 workers registered: generate-order, validate-order, order-allocation')
 }
