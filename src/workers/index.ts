@@ -1,6 +1,10 @@
-import { Camunda8 } from '@camunda8/sdk'
+import { initTelemetry } from '../telemetry'
 import 'dotenv/config'
-import { startMetricsServer } from '../metrics/middleware'
+
+// Initialize OTel SDK BEFORE importing anything else that creates spans/metrics
+initTelemetry()
+
+import { Camunda8 } from '@camunda8/sdk'
 import { registerBrewingWorkers } from './brewing'
 import { registerBottlingWorkers } from './bottling'
 import { registerCratingWorkers } from './crating'
@@ -8,11 +12,10 @@ import { registerSalesWorkers } from './sales'
 import { registerMaterialsWorkers } from './materials'
 import { registerDistributionWorkers } from './distribution'
 import { registerAccountingWorkers } from './accounting'
+import { logger } from '../telemetry/logger'
 
 const camunda = new Camunda8()
 const zeebe = camunda.getZeebeGrpcApiClient()
-
-startMetricsServer()
 
 // Phase 1: Physical factory
 registerBrewingWorkers(zeebe)
@@ -25,6 +28,4 @@ registerMaterialsWorkers(zeebe)
 registerDistributionWorkers(zeebe)
 registerAccountingWorkers(zeebe)
 
-console.log('\n[FACTORIO] All workers registered. Awaiting jobs...')
-console.log('[FACTORIO] Processes: brewing, bottling, crating, sales, materials, distribution, accounting')
-console.log('[FACTORIO] Workers: 34 (27 automation, 7 LLM)')
+logger.info({ processes: ['brewing', 'bottling', 'crating', 'sales', 'materials', 'distribution', 'accounting'], workerCount: 34 }, 'All workers registered. Awaiting jobs...')
