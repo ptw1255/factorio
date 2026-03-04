@@ -8,9 +8,35 @@ export interface FinishedGoodsEntry {
   allocated: number
 }
 
+export interface Order {
+  orderId: string
+  recipeId: string
+  quantity: number
+  customerId: string
+  customerName: string
+  deliveryAddress: string
+  priority: 'standard' | 'express' | 'event'
+  status: 'pending' | 'fulfilled'
+  createdAt: string
+}
+
+export interface LedgerEntry {
+  entryId: string
+  timestamp: string
+  debitAccount: string
+  creditAccount: string
+  amount: number
+  description: string
+  sourceEvent: string
+  correlationId: string
+}
+
 class FactoryState {
   private rawMaterials = new Map<string, InventoryItem>()
   private finishedGoods = new Map<string, FinishedGoodsEntry>()
+  private orders = new Map<string, Order>()
+  private ledger: LedgerEntry[] = []
+  private accountBalances = new Map<string, number>()
 
   addRawMaterial(id: string, quantity: number, unitCost: number): void {
     const existing = this.rawMaterials.get(id)
@@ -68,10 +94,50 @@ class FactoryState {
     }
   }
 
+  addOrder(params: Omit<Order, 'status' | 'createdAt'>): void {
+    this.orders.set(params.orderId, {
+      ...params,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  getOrder(orderId: string): Order | undefined {
+    return this.orders.get(orderId)
+  }
+
+  fulfillOrder(orderId: string): void {
+    const order = this.orders.get(orderId)
+    if (order) order.status = 'fulfilled'
+  }
+
+  getPendingOrders(): Order[] {
+    return Array.from(this.orders.values()).filter(o => o.status === 'pending')
+  }
+
+  appendLedgerEntry(entry: LedgerEntry): void {
+    this.ledger.push(entry)
+    const debitBal = this.accountBalances.get(entry.debitAccount) || 0
+    this.accountBalances.set(entry.debitAccount, debitBal + entry.amount)
+    const creditBal = this.accountBalances.get(entry.creditAccount) || 0
+    this.accountBalances.set(entry.creditAccount, creditBal - entry.amount)
+  }
+
+  getLedger(): LedgerEntry[] {
+    return this.ledger
+  }
+
+  getAccountBalance(account: string): number {
+    return Math.abs(this.accountBalances.get(account) || 0)
+  }
+
   /** Reset all state — useful for testing */
   reset(): void {
     this.rawMaterials.clear()
     this.finishedGoods.clear()
+    this.orders.clear()
+    this.ledger = []
+    this.accountBalances.clear()
   }
 }
 

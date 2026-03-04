@@ -79,3 +79,72 @@ describe('factoryState — snapshot', () => {
     expect(snapshot.finishedGoods['kolsch']).toBeDefined()
   })
 })
+
+describe('factoryState — orders', () => {
+  it('addOrder stores a pending order', () => {
+    factoryState.addOrder({
+      orderId: 'order-1', recipeId: 'parkers-kolsch', quantity: 10,
+      customerId: 'cust-1', customerName: 'Test Bar',
+      deliveryAddress: '123 Main St', priority: 'standard' as const,
+    })
+    const order = factoryState.getOrder('order-1')
+    expect(order).toBeDefined()
+    expect(order!.status).toBe('pending')
+    expect(order!.quantity).toBe(10)
+  })
+
+  it('fulfillOrder changes status to fulfilled', () => {
+    factoryState.addOrder({
+      orderId: 'order-2', recipeId: 'parkers-kolsch', quantity: 5,
+      customerId: 'cust-2', customerName: 'Test Pub',
+      deliveryAddress: '456 Oak Ave', priority: 'express' as const,
+    })
+    factoryState.fulfillOrder('order-2')
+    expect(factoryState.getOrder('order-2')!.status).toBe('fulfilled')
+  })
+
+  it('getPendingOrders returns only pending orders', () => {
+    factoryState.addOrder({ orderId: 'o-a', recipeId: 'pk', quantity: 1, customerId: 'c1', customerName: 'A', deliveryAddress: 'a', priority: 'standard' as const })
+    factoryState.addOrder({ orderId: 'o-b', recipeId: 'pk', quantity: 2, customerId: 'c2', customerName: 'B', deliveryAddress: 'b', priority: 'standard' as const })
+    factoryState.fulfillOrder('o-a')
+    expect(factoryState.getPendingOrders()).toHaveLength(1)
+    expect(factoryState.getPendingOrders()[0].orderId).toBe('o-b')
+  })
+})
+
+describe('factoryState — ledger', () => {
+  it('appendLedgerEntry adds to ledger', () => {
+    factoryState.appendLedgerEntry({
+      entryId: 'entry-1', timestamp: new Date().toISOString(),
+      debitAccount: 'CASH', creditAccount: 'REV-SALES', amount: 360,
+      description: 'Sale of 10 cases', sourceEvent: 'OrderPlaced', correlationId: 'order-1',
+    })
+    expect(factoryState.getLedger()).toHaveLength(1)
+  })
+
+  it('getAccountBalance returns correct balance', () => {
+    factoryState.appendLedgerEntry({
+      entryId: 'e-1', timestamp: new Date().toISOString(),
+      debitAccount: 'CASH', creditAccount: 'REV-SALES', amount: 100,
+      description: 'test', sourceEvent: 'test', correlationId: 'test',
+    })
+    expect(factoryState.getAccountBalance('CASH')).toBe(100)
+    expect(factoryState.getAccountBalance('REV-SALES')).toBe(100)
+  })
+
+  it('multiple entries accumulate balances', () => {
+    factoryState.appendLedgerEntry({
+      entryId: 'e-1', timestamp: new Date().toISOString(),
+      debitAccount: 'CASH', creditAccount: 'REV-SALES', amount: 100,
+      description: 'sale 1', sourceEvent: 'OrderPlaced', correlationId: 'o1',
+    })
+    factoryState.appendLedgerEntry({
+      entryId: 'e-2', timestamp: new Date().toISOString(),
+      debitAccount: 'OPEX-SHIPPING', creditAccount: 'CASH', amount: 25,
+      description: 'shipping', sourceEvent: 'DeliveryComplete', correlationId: 's1',
+    })
+    expect(factoryState.getAccountBalance('CASH')).toBe(75)
+    expect(factoryState.getAccountBalance('REV-SALES')).toBe(100)
+    expect(factoryState.getAccountBalance('OPEX-SHIPPING')).toBe(25)
+  })
+})
