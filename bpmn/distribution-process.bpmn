@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Distribution" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
+  <bpmn:process id="distribution-process" name="Distribution Process" isExecutable="true">
+
+    <!-- START -->
+    <bpmn:startEvent id="Start_Distribution" name="Start Distribution">
+      <bpmn:outgoing>Flow_Start_to_Route</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- 1. Route Planning (LLM) -->
+    <bpmn:serviceTask id="Task_RoutePlanning" name="Route Planning">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="route-planning" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="timeout" value="60000" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_Route</bpmn:incoming>
+      <bpmn:outgoing>Flow_Route_to_Load</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 2. Load Assignment (automation) -->
+    <bpmn:serviceTask id="Task_LoadAssignment" name="Load Assignment">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="load-assignment" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Route_to_Load</bpmn:incoming>
+      <bpmn:outgoing>Flow_Load_to_Dispatch</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 3. Dispatch Truck (automation) -->
+    <bpmn:serviceTask id="Task_Dispatch" name="Dispatch Truck">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="dispatch-truck" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Load_to_Dispatch</bpmn:incoming>
+      <bpmn:outgoing>Flow_Dispatch_to_Timer</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Timer — Transit Wait (5s simulated) -->
+    <bpmn:intermediateCatchEvent id="Timer_Transit" name="Transit Wait">
+      <bpmn:incoming>Flow_Dispatch_to_Timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Timer_to_Confirm</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_Transit">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <!-- 4. Delivery Confirmation (automation) -->
+    <bpmn:serviceTask id="Task_DeliveryConfirmation" name="Delivery Confirmation">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="delivery-confirmation" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Timer_to_Confirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_Confirm_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- END — Delivered -->
+    <bpmn:endEvent id="End_Delivered" name="Delivered">
+      <bpmn:incoming>Flow_Confirm_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="Flow_Start_to_Route" sourceRef="Start_Distribution" targetRef="Task_RoutePlanning" />
+    <bpmn:sequenceFlow id="Flow_Route_to_Load" sourceRef="Task_RoutePlanning" targetRef="Task_LoadAssignment" />
+    <bpmn:sequenceFlow id="Flow_Load_to_Dispatch" sourceRef="Task_LoadAssignment" targetRef="Task_Dispatch" />
+    <bpmn:sequenceFlow id="Flow_Dispatch_to_Timer" sourceRef="Task_Dispatch" targetRef="Timer_Transit" />
+    <bpmn:sequenceFlow id="Flow_Timer_to_Confirm" sourceRef="Timer_Transit" targetRef="Task_DeliveryConfirmation" />
+    <bpmn:sequenceFlow id="Flow_Confirm_to_End" sourceRef="Task_DeliveryConfirmation" targetRef="End_Delivered" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Distribution">
+    <bpmndi:BPMNPlane id="BPMNPlane_Distribution" bpmnElement="distribution-process">
+
+      <!-- ===============================================================
+           SHAPES — Linear flow (Y=200 center)
+           =============================================================== -->
+
+      <!-- Start_Distribution: center (118, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_Start_Distribution" bpmnElement="Start_Distribution">
+        <dc:Bounds x="100" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="76" y="225" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_RoutePlanning: center (256, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_RoutePlanning" bpmnElement="Task_RoutePlanning">
+        <dc:Bounds x="206" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_LoadAssignment: center (416, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_LoadAssignment" bpmnElement="Task_LoadAssignment">
+        <dc:Bounds x="366" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_Dispatch: center (576, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_Dispatch" bpmnElement="Task_Dispatch">
+        <dc:Bounds x="526" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Timer_Transit: center (698, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_Timer_Transit" bpmnElement="Timer_Transit">
+        <dc:Bounds x="680" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="664" y="225" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_DeliveryConfirmation: center (818, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_DeliveryConfirmation" bpmnElement="Task_DeliveryConfirmation">
+        <dc:Bounds x="768" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- End_Delivered: center (948, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_Delivered" bpmnElement="End_Delivered">
+        <dc:Bounds x="930" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="918" y="225" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           EDGES
+           =============================================================== -->
+
+      <!-- Flow_Start_to_Route -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_to_Route" bpmnElement="Flow_Start_to_Route">
+        <di:waypoint x="136" y="200" />
+        <di:waypoint x="206" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Route_to_Load -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Route_to_Load" bpmnElement="Flow_Route_to_Load">
+        <di:waypoint x="306" y="200" />
+        <di:waypoint x="366" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Load_to_Dispatch -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Load_to_Dispatch" bpmnElement="Flow_Load_to_Dispatch">
+        <di:waypoint x="466" y="200" />
+        <di:waypoint x="526" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Dispatch_to_Timer -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Dispatch_to_Timer" bpmnElement="Flow_Dispatch_to_Timer">
+        <di:waypoint x="626" y="200" />
+        <di:waypoint x="680" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Timer_to_Confirm -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Timer_to_Confirm" bpmnElement="Flow_Timer_to_Confirm">
+        <di:waypoint x="716" y="200" />
+        <di:waypoint x="768" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Confirm_to_End -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Confirm_to_End" bpmnElement="Flow_Confirm_to_End">
+        <di:waypoint x="868" y="200" />
+        <di:waypoint x="930" y="200" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

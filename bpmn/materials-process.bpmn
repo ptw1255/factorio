@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Materials" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
+  <bpmn:process id="materials-process" name="Materials Management Process" isExecutable="true">
+
+    <!-- START -->
+    <bpmn:startEvent id="Start_Materials" name="Start Materials">
+      <bpmn:outgoing>Flow_Start_to_CheckInv</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- 1. Check Inventory (automation) -->
+    <bpmn:serviceTask id="Task_CheckInventory" name="Check Inventory">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="check-inventory" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_CheckInv</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckInv_to_CalcReq</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 2. Calculate Requirements (automation) -->
+    <bpmn:serviceTask id="Task_CalculateRequirements" name="Calculate Requirements">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="calculate-requirements" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_CheckInv_to_CalcReq</bpmn:incoming>
+      <bpmn:outgoing>Flow_CalcReq_to_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Materials Available Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_MaterialsAvailable" name="Materials Available?">
+      <bpmn:incoming>Flow_CalcReq_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sufficient</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Insufficient</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Sufficient path -->
+    <bpmn:sequenceFlow id="Flow_Sufficient" name="Yes" sourceRef="Gateway_MaterialsAvailable" targetRef="End_MaterialsReady">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= inventoryCheck.sufficient = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- Insufficient path -->
+    <bpmn:sequenceFlow id="Flow_Insufficient" name="No" sourceRef="Gateway_MaterialsAvailable" targetRef="Task_FindSuppliers">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= inventoryCheck.sufficient = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- 3. Find Suppliers (LLM) -->
+    <bpmn:serviceTask id="Task_FindSuppliers" name="Find Suppliers">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="find-suppliers" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="timeout" value="60000" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Insufficient</bpmn:incoming>
+      <bpmn:outgoing>Flow_Suppliers_to_Timer</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Timer — Delivery Wait (5s simulated) -->
+    <bpmn:intermediateCatchEvent id="Timer_DeliveryWait" name="Delivery Wait">
+      <bpmn:incoming>Flow_Suppliers_to_Timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Timer_to_Receive</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_DeliveryWait">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <!-- 4. Receive Materials (automation) -->
+    <bpmn:serviceTask id="Task_ReceiveMaterials" name="Receive Materials">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="receive-materials" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Timer_to_Receive</bpmn:incoming>
+      <bpmn:outgoing>Flow_Receive_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- END — Materials Ready (two incoming) -->
+    <bpmn:endEvent id="End_MaterialsReady" name="Materials Ready">
+      <bpmn:incoming>Flow_Sufficient</bpmn:incoming>
+      <bpmn:incoming>Flow_Receive_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="Flow_Start_to_CheckInv" sourceRef="Start_Materials" targetRef="Task_CheckInventory" />
+    <bpmn:sequenceFlow id="Flow_CheckInv_to_CalcReq" sourceRef="Task_CheckInventory" targetRef="Task_CalculateRequirements" />
+    <bpmn:sequenceFlow id="Flow_CalcReq_to_Gateway" sourceRef="Task_CalculateRequirements" targetRef="Gateway_MaterialsAvailable" />
+    <bpmn:sequenceFlow id="Flow_Suppliers_to_Timer" sourceRef="Task_FindSuppliers" targetRef="Timer_DeliveryWait" />
+    <bpmn:sequenceFlow id="Flow_Timer_to_Receive" sourceRef="Timer_DeliveryWait" targetRef="Task_ReceiveMaterials" />
+    <bpmn:sequenceFlow id="Flow_Receive_to_End" sourceRef="Task_ReceiveMaterials" targetRef="End_MaterialsReady" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Materials">
+    <bpmndi:BPMNPlane id="BPMNPlane_Materials" bpmnElement="materials-process">
+
+      <!-- ===============================================================
+           SHAPES — Main line (Y=200 center)
+           =============================================================== -->
+
+      <!-- Start_Materials: center (118, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_Start_Materials" bpmnElement="Start_Materials">
+        <dc:Bounds x="100" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="80" y="225" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_CheckInventory: center (256, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_CheckInventory" bpmnElement="Task_CheckInventory">
+        <dc:Bounds x="206" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_CalculateRequirements: center (416, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_CalculateRequirements" bpmnElement="Task_CalculateRequirements">
+        <dc:Bounds x="366" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_MaterialsAvailable: center (541, 200), 50x50 -->
+      <bpmndi:BPMNShape id="Shape_Gateway_MaterialsAvailable" bpmnElement="Gateway_MaterialsAvailable" isMarkerVisible="true">
+        <dc:Bounds x="516" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="494" y="232" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_MaterialsReady (sufficient path): center (696, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_MaterialsReady" bpmnElement="End_MaterialsReady">
+        <dc:Bounds x="678" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="656" y="225" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           SHAPES — Procurement path (Y=340 center)
+           =============================================================== -->
+
+      <!-- Task_FindSuppliers: center (616, 340), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_FindSuppliers" bpmnElement="Task_FindSuppliers">
+        <dc:Bounds x="566" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Timer_DeliveryWait: center (738, 340), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_Timer_DeliveryWait" bpmnElement="Timer_DeliveryWait">
+        <dc:Bounds x="720" y="322" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="700" y="365" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_ReceiveMaterials: center (856, 340), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_ReceiveMaterials" bpmnElement="Task_ReceiveMaterials">
+        <dc:Bounds x="806" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           EDGES
+           =============================================================== -->
+
+      <!-- Flow_Start_to_CheckInv -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_to_CheckInv" bpmnElement="Flow_Start_to_CheckInv">
+        <di:waypoint x="136" y="200" />
+        <di:waypoint x="206" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_CheckInv_to_CalcReq -->
+      <bpmndi:BPMNEdge id="Edge_Flow_CheckInv_to_CalcReq" bpmnElement="Flow_CheckInv_to_CalcReq">
+        <di:waypoint x="306" y="200" />
+        <di:waypoint x="366" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_CalcReq_to_Gateway -->
+      <bpmndi:BPMNEdge id="Edge_Flow_CalcReq_to_Gateway" bpmnElement="Flow_CalcReq_to_Gateway">
+        <di:waypoint x="466" y="200" />
+        <di:waypoint x="516" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Sufficient: Gateway (566,200) → End_MaterialsReady (678,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Sufficient" bpmnElement="Flow_Sufficient">
+        <di:waypoint x="566" y="200" />
+        <di:waypoint x="678" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="612" y="182" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Insufficient: Gateway (541,225) → down → Task_FindSuppliers (566,300) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Insufficient" bpmnElement="Flow_Insufficient">
+        <di:waypoint x="541" y="225" />
+        <di:waypoint x="541" y="340" />
+        <di:waypoint x="566" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="546" y="275" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Suppliers_to_Timer -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Suppliers_to_Timer" bpmnElement="Flow_Suppliers_to_Timer">
+        <di:waypoint x="666" y="340" />
+        <di:waypoint x="720" y="340" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Timer_to_Receive -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Timer_to_Receive" bpmnElement="Flow_Timer_to_Receive">
+        <di:waypoint x="756" y="340" />
+        <di:waypoint x="806" y="340" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Receive_to_End: Task_ReceiveMaterials (906,340) → right → up → End_MaterialsReady (714,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Receive_to_End" bpmnElement="Flow_Receive_to_End">
+        <di:waypoint x="906" y="340" />
+        <di:waypoint x="940" y="340" />
+        <di:waypoint x="940" y="200" />
+        <di:waypoint x="714" y="200" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

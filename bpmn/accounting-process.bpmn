@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Accounting" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
+  <bpmn:process id="accounting-process" name="Accounting Process" isExecutable="true">
+
+    <!-- START -->
+    <bpmn:startEvent id="Start_Accounting" name="Start Accounting">
+      <bpmn:outgoing>Flow_Start_to_Gateway</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Event Type Gateway (4 branches) -->
+    <bpmn:exclusiveGateway id="Gateway_EventType" name="Event Type?">
+      <bpmn:incoming>Flow_Start_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_OrderPlaced</bpmn:outgoing>
+      <bpmn:outgoing>Flow_MaterialsPurchased</bpmn:outgoing>
+      <bpmn:outgoing>Flow_BrewComplete</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DeliveryComplete</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Branch 1: OrderPlaced → Record Revenue -->
+    <bpmn:sequenceFlow id="Flow_OrderPlaced" name="Order Placed" sourceRef="Gateway_EventType" targetRef="Task_RecordRevenue">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= eventType = "OrderPlaced"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:serviceTask id="Task_RecordRevenue" name="Record Revenue">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="record-revenue" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_OrderPlaced</bpmn:incoming>
+      <bpmn:outgoing>Flow_Revenue_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Revenue" name="Revenue Recorded">
+      <bpmn:incoming>Flow_Revenue_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Branch 2: MaterialsPurchased → Record Materials Cost -->
+    <bpmn:sequenceFlow id="Flow_MaterialsPurchased" name="Materials Purchased" sourceRef="Gateway_EventType" targetRef="Task_RecordMaterialsCost">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= eventType = "MaterialsPurchased"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:serviceTask id="Task_RecordMaterialsCost" name="Record Materials Cost">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="record-materials-cost" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MaterialsPurchased</bpmn:incoming>
+      <bpmn:outgoing>Flow_Materials_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Materials" name="Materials Cost Recorded">
+      <bpmn:incoming>Flow_Materials_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Branch 3: BrewComplete → Calculate Batch Cost -->
+    <bpmn:sequenceFlow id="Flow_BrewComplete" name="Brew Complete" sourceRef="Gateway_EventType" targetRef="Task_CalculateBatchCost">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= eventType = "BrewComplete"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:serviceTask id="Task_CalculateBatchCost" name="Calculate Batch Cost">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="calculate-batch-cost" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_BrewComplete</bpmn:incoming>
+      <bpmn:outgoing>Flow_BatchCost_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_BatchCost" name="Batch Cost Recorded">
+      <bpmn:incoming>Flow_BatchCost_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Branch 4: DeliveryComplete → Record Shipping Cost -->
+    <bpmn:sequenceFlow id="Flow_DeliveryComplete" name="Delivery Complete" sourceRef="Gateway_EventType" targetRef="Task_RecordShippingCost">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= eventType = "DeliveryComplete"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:serviceTask id="Task_RecordShippingCost" name="Record Shipping Cost">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="record-shipping-cost" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_DeliveryComplete</bpmn:incoming>
+      <bpmn:outgoing>Flow_Shipping_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Shipping" name="Shipping Cost Recorded">
+      <bpmn:incoming>Flow_Shipping_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="Flow_Start_to_Gateway" sourceRef="Start_Accounting" targetRef="Gateway_EventType" />
+    <bpmn:sequenceFlow id="Flow_Revenue_to_End" sourceRef="Task_RecordRevenue" targetRef="End_Revenue" />
+    <bpmn:sequenceFlow id="Flow_Materials_to_End" sourceRef="Task_RecordMaterialsCost" targetRef="End_Materials" />
+    <bpmn:sequenceFlow id="Flow_BatchCost_to_End" sourceRef="Task_CalculateBatchCost" targetRef="End_BatchCost" />
+    <bpmn:sequenceFlow id="Flow_Shipping_to_End" sourceRef="Task_RecordShippingCost" targetRef="End_Shipping" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Accounting">
+    <bpmndi:BPMNPlane id="BPMNPlane_Accounting" bpmnElement="accounting-process">
+
+      <!-- ===============================================================
+           SHAPES — Start + Gateway (left side)
+           =============================================================== -->
+
+      <!-- Start_Accounting: center (118, 310), 36x36 — centered vertically among 4 branches -->
+      <bpmndi:BPMNShape id="Shape_Start_Accounting" bpmnElement="Start_Accounting">
+        <dc:Bounds x="100" y="292" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="76" y="335" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_EventType: center (251, 310), 50x50 -->
+      <bpmndi:BPMNShape id="Shape_Gateway_EventType" bpmnElement="Gateway_EventType" isMarkerVisible="true">
+        <dc:Bounds x="226" y="285" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="218" y="342" width="66" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           SHAPES — Branch 1: OrderPlaced → Revenue (Y=120)
+           =============================================================== -->
+
+      <!-- Task_RecordRevenue: center (426, 120), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_RecordRevenue" bpmnElement="Task_RecordRevenue">
+        <dc:Bounds x="376" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- End_Revenue: center (556, 120), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_Revenue" bpmnElement="End_Revenue">
+        <dc:Bounds x="538" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="510" y="145" width="92" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           SHAPES — Branch 2: MaterialsPurchased → Materials Cost (Y=240)
+           =============================================================== -->
+
+      <!-- Task_RecordMaterialsCost: center (426, 240), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_RecordMaterialsCost" bpmnElement="Task_RecordMaterialsCost">
+        <dc:Bounds x="376" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- End_Materials: center (556, 240), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_Materials" bpmnElement="End_Materials">
+        <dc:Bounds x="538" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="498" y="265" width="116" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           SHAPES — Branch 3: BrewComplete → Batch Cost (Y=380)
+           =============================================================== -->
+
+      <!-- Task_CalculateBatchCost: center (426, 380), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_CalculateBatchCost" bpmnElement="Task_CalculateBatchCost">
+        <dc:Bounds x="376" y="340" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- End_BatchCost: center (556, 380), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_BatchCost" bpmnElement="End_BatchCost">
+        <dc:Bounds x="538" y="362" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="502" y="405" width="108" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           SHAPES — Branch 4: DeliveryComplete → Shipping Cost (Y=500)
+           =============================================================== -->
+
+      <!-- Task_RecordShippingCost: center (426, 500), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_RecordShippingCost" bpmnElement="Task_RecordShippingCost">
+        <dc:Bounds x="376" y="460" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- End_Shipping: center (556, 500), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_Shipping" bpmnElement="End_Shipping">
+        <dc:Bounds x="538" y="482" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="498" y="525" width="116" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           EDGES
+           =============================================================== -->
+
+      <!-- Flow_Start_to_Gateway -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_to_Gateway" bpmnElement="Flow_Start_to_Gateway">
+        <di:waypoint x="136" y="310" />
+        <di:waypoint x="226" y="310" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_OrderPlaced: Gateway (251,285) → up → Task_RecordRevenue (376,120) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_OrderPlaced" bpmnElement="Flow_OrderPlaced">
+        <di:waypoint x="251" y="285" />
+        <di:waypoint x="251" y="120" />
+        <di:waypoint x="376" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="143" width="66" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_MaterialsPurchased: Gateway (251,295) → up-right → Task_RecordMaterialsCost (376,240) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_MaterialsPurchased" bpmnElement="Flow_MaterialsPurchased">
+        <di:waypoint x="251" y="285" />
+        <di:waypoint x="251" y="240" />
+        <di:waypoint x="376" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="223" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_BrewComplete: Gateway (251,335) → down-right → Task_CalculateBatchCost (376,380) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_BrewComplete" bpmnElement="Flow_BrewComplete">
+        <di:waypoint x="251" y="335" />
+        <di:waypoint x="251" y="380" />
+        <di:waypoint x="376" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="363" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_DeliveryComplete: Gateway (251,335) → down → Task_RecordShippingCost (376,500) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_DeliveryComplete" bpmnElement="Flow_DeliveryComplete">
+        <di:waypoint x="251" y="335" />
+        <di:waypoint x="251" y="500" />
+        <di:waypoint x="376" y="500" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="483" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Revenue_to_End -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Revenue_to_End" bpmnElement="Flow_Revenue_to_End">
+        <di:waypoint x="476" y="120" />
+        <di:waypoint x="538" y="120" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Materials_to_End -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Materials_to_End" bpmnElement="Flow_Materials_to_End">
+        <di:waypoint x="476" y="240" />
+        <di:waypoint x="538" y="240" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_BatchCost_to_End -->
+      <bpmndi:BPMNEdge id="Edge_Flow_BatchCost_to_End" bpmnElement="Flow_BatchCost_to_End">
+        <di:waypoint x="476" y="380" />
+        <di:waypoint x="538" y="380" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Shipping_to_End -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Shipping_to_End" bpmnElement="Flow_Shipping_to_End">
+        <di:waypoint x="476" y="500" />
+        <di:waypoint x="538" y="500" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

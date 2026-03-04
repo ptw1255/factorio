@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Sales" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
+  <bpmn:process id="sales-process" name="Sales Process" isExecutable="true">
+
+    <!-- START — Timer: every 30 seconds -->
+    <bpmn:startEvent id="Start_Sales" name="Order Timer">
+      <bpmn:outgoing>Flow_Start_to_Generate</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_Sales">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R/PT30S</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+
+    <!-- 1. Generate Order (LLM) -->
+    <bpmn:serviceTask id="Task_GenerateOrder" name="Generate Order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="generate-order" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="timeout" value="60000" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_Generate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Generate_to_Validate</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 2. Validate Order (automation) -->
+    <bpmn:serviceTask id="Task_ValidateOrder" name="Validate Order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="validate-order" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Generate_to_Validate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Validate_to_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Fulfillment Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_Fulfillment" name="Fulfillment Status?">
+      <bpmn:incoming>Flow_Validate_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Fulfill</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Backorder</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- FULFILL path -->
+    <bpmn:sequenceFlow id="Flow_Fulfill" name="Fulfill" sourceRef="Gateway_Fulfillment" targetRef="Task_AllocateOrder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= fulfillmentStatus = "FULFILL"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- BACKORDER path -->
+    <bpmn:sequenceFlow id="Flow_Backorder" name="Backorder" sourceRef="Gateway_Fulfillment" targetRef="End_Backordered">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= fulfillmentStatus = "BACKORDER"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- 3. Allocate Order (automation) -->
+    <bpmn:serviceTask id="Task_AllocateOrder" name="Allocate Order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="order-allocation" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Fulfill</bpmn:incoming>
+      <bpmn:outgoing>Flow_Allocate_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- END — Fulfilled -->
+    <bpmn:endEvent id="End_Fulfilled" name="Order Fulfilled">
+      <bpmn:incoming>Flow_Allocate_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- END — Backordered -->
+    <bpmn:endEvent id="End_Backordered" name="Order Backordered">
+      <bpmn:incoming>Flow_Backorder</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="Flow_Start_to_Generate" sourceRef="Start_Sales" targetRef="Task_GenerateOrder" />
+    <bpmn:sequenceFlow id="Flow_Generate_to_Validate" sourceRef="Task_GenerateOrder" targetRef="Task_ValidateOrder" />
+    <bpmn:sequenceFlow id="Flow_Validate_to_Gateway" sourceRef="Task_ValidateOrder" targetRef="Gateway_Fulfillment" />
+    <bpmn:sequenceFlow id="Flow_Allocate_to_End" sourceRef="Task_AllocateOrder" targetRef="End_Fulfilled" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Sales">
+    <bpmndi:BPMNPlane id="BPMNPlane_Sales" bpmnElement="sales-process">
+
+      <!-- ===============================================================
+           SHAPES — Main line (Y=200 center)
+           =============================================================== -->
+
+      <!-- Start_Sales: center (118, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_Start_Sales" bpmnElement="Start_Sales">
+        <dc:Bounds x="100" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="84" y="225" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_GenerateOrder: center (256, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_GenerateOrder" bpmnElement="Task_GenerateOrder">
+        <dc:Bounds x="206" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Task_ValidateOrder: center (416, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_ValidateOrder" bpmnElement="Task_ValidateOrder">
+        <dc:Bounds x="366" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway_Fulfillment: center (541, 200), 50x50 -->
+      <bpmndi:BPMNShape id="Shape_Gateway_Fulfillment" bpmnElement="Gateway_Fulfillment" isMarkerVisible="true">
+        <dc:Bounds x="516" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="496" y="232" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_AllocateOrder: center (696, 200), 100x80 -->
+      <bpmndi:BPMNShape id="Shape_Task_AllocateOrder" bpmnElement="Task_AllocateOrder">
+        <dc:Bounds x="646" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- End_Fulfilled: center (826, 200), 36x36 -->
+      <bpmndi:BPMNShape id="Shape_End_Fulfilled" bpmnElement="End_Fulfilled">
+        <dc:Bounds x="808" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="790" y="225" width="72" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_Backordered: center (626, 330), 36x36 — below gateway -->
+      <bpmndi:BPMNShape id="Shape_End_Backordered" bpmnElement="End_Backordered">
+        <dc:Bounds x="608" y="312" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="582" y="355" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ===============================================================
+           EDGES
+           =============================================================== -->
+
+      <!-- Flow_Start_to_Generate -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_to_Generate" bpmnElement="Flow_Start_to_Generate">
+        <di:waypoint x="136" y="200" />
+        <di:waypoint x="206" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Generate_to_Validate -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Generate_to_Validate" bpmnElement="Flow_Generate_to_Validate">
+        <di:waypoint x="306" y="200" />
+        <di:waypoint x="366" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Validate_to_Gateway -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Validate_to_Gateway" bpmnElement="Flow_Validate_to_Gateway">
+        <di:waypoint x="466" y="200" />
+        <di:waypoint x="516" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Fulfill: Gateway (566,200) → Task_AllocateOrder (646,200) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Fulfill" bpmnElement="Flow_Fulfill">
+        <di:waypoint x="566" y="200" />
+        <di:waypoint x="646" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="590" y="182" width="32" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Backorder: Gateway (541,225) → down → End_Backordered (626,312) -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Backorder" bpmnElement="Flow_Backorder">
+        <di:waypoint x="541" y="225" />
+        <di:waypoint x="541" y="330" />
+        <di:waypoint x="608" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="546" y="270" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Flow_Allocate_to_End -->
+      <bpmndi:BPMNEdge id="Edge_Flow_Allocate_to_End" bpmnElement="Flow_Allocate_to_End">
+        <di:waypoint x="746" y="200" />
+        <di:waypoint x="808" y="200" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
