@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Brewing" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Claude Code" exporterVersion="1.0.0">
+  <bpmn:process id="brewing-process" name="Brewing Process" isExecutable="true">
+
+    <!-- START — manual trigger or message -->
+    <bpmn:startEvent id="Start_Brewing" name="Start Brew">
+      <bpmn:outgoing>Flow_Start_to_Mashing</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- 1. Mashing (automation) -->
+    <bpmn:serviceTask id="Task_Mashing" name="Mashing">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="mashing" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_Mashing</bpmn:incoming>
+      <bpmn:outgoing>Flow_Mashing_to_Lautering</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 2. Lautering (automation) -->
+    <bpmn:serviceTask id="Task_Lautering" name="Lautering">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="lautering" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Mashing_to_Lautering</bpmn:incoming>
+      <bpmn:outgoing>Flow_Lautering_to_Boiling</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 3. Boil + Hop Additions (automation) -->
+    <bpmn:serviceTask id="Task_Boiling" name="Boil &amp; Hop Additions">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="boil-hop-addition" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Lautering_to_Boiling</bpmn:incoming>
+      <bpmn:outgoing>Flow_Boiling_to_Cooling</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 4. Cooling (automation) -->
+    <bpmn:serviceTask id="Task_Cooling" name="Cooling">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="cooling" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Boiling_to_Cooling</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cooling_to_FermCheck</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 5. Fermentation Check (automation, loop) -->
+    <bpmn:serviceTask id="Task_FermentationCheck" name="Fermentation Check">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="fermentation-check" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cooling_to_FermCheck</bpmn:incoming>
+      <bpmn:incoming>Flow_FermLoop_Back</bpmn:incoming>
+      <bpmn:outgoing>Flow_FermCheck_to_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Fermentation Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_FermComplete" name="Fermentation Complete?">
+      <bpmn:incoming>Flow_FermCheck_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ferm_Done</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Ferm_Continue</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Ferm_Stuck</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Fermentation complete → lagering -->
+    <bpmn:sequenceFlow id="Flow_Ferm_Done" name="Complete" sourceRef="Gateway_FermComplete" targetRef="Task_Lagering">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= fermentationState.attenuation &gt;= 75</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- Fermentation not done, not stuck → loop back -->
+    <bpmn:sequenceFlow id="Flow_Ferm_Continue" name="In Progress" sourceRef="Gateway_FermComplete" targetRef="Timer_FermWait">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= fermentationState.attenuation &lt; 75 and fermentationState.stuck = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- Fermentation stuck → brewmaster hold -->
+    <bpmn:sequenceFlow id="Flow_Ferm_Stuck" name="Stuck" sourceRef="Gateway_FermComplete" targetRef="Task_BrewmasterFermHold">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= fermentationState.stuck = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- Timer between fermentation checks (simulated day) -->
+    <bpmn:intermediateCatchEvent id="Timer_FermWait" name="Wait 1 Day (simulated)">
+      <bpmn:incoming>Flow_Ferm_Continue</bpmn:incoming>
+      <bpmn:outgoing>Flow_FermLoop_Back</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_FermWait">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <!-- Brewmaster Quality Hold (stuck fermentation) -->
+    <bpmn:userTask id="Task_BrewmasterFermHold" name="Brewmaster Quality Hold">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Ferm_Stuck</bpmn:incoming>
+      <bpmn:outgoing>Flow_FermHold_to_End</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- 6. Lagering (automation) -->
+    <bpmn:serviceTask id="Task_Lagering" name="Lagering Complete">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="lagering-complete" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Ferm_Done</bpmn:incoming>
+      <bpmn:outgoing>Flow_Lagering_to_QC</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- 7. Batch QC (LLM) -->
+    <bpmn:serviceTask id="Task_BatchQC" name="Batch QC (LLM)">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="batch-qc" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Lagering_to_QC</bpmn:incoming>
+      <bpmn:outgoing>Flow_QC_to_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- QC Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_QCPassed" name="QC Passed?">
+      <bpmn:incoming>Flow_QC_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_QC_Pass</bpmn:outgoing>
+      <bpmn:outgoing>Flow_QC_Fail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_QC_Pass" name="Passed" sourceRef="Gateway_QCPassed" targetRef="End_BrewComplete">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= batchQC.passed = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_QC_Fail" name="Failed" sourceRef="Gateway_QCPassed" targetRef="Task_BrewmasterQCHold">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= batchQC.passed = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- Brewmaster QC Hold -->
+    <bpmn:userTask id="Task_BrewmasterQCHold" name="Brewmaster QC Hold">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_QC_Fail</bpmn:incoming>
+      <bpmn:outgoing>Flow_QCHold_to_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Brewmaster decision gateway -->
+    <bpmn:exclusiveGateway id="Gateway_BrewmasterDecision" name="Brewmaster Decision">
+      <bpmn:incoming>Flow_QCHold_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approve_Override</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Dump_Batch</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_Approve_Override" name="Approve Override" sourceRef="Gateway_BrewmasterDecision" targetRef="End_BrewComplete">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= brewmasterDecision.approved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_Dump_Batch" name="Dump Batch" sourceRef="Gateway_BrewmasterDecision" targetRef="End_BatchDumped">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= brewmasterDecision.approved = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <!-- END — Brew Complete (publishes message for bottling) -->
+    <bpmn:endEvent id="End_BrewComplete" name="Brew Complete">
+      <bpmn:incoming>Flow_QC_Pass</bpmn:incoming>
+      <bpmn:incoming>Flow_Approve_Override</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_BrewComplete">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="brew-complete-publish" />
+        </bpmn:extensionElements>
+      </bpmn:messageEventDefinition>
+    </bpmn:endEvent>
+
+    <!-- END — Batch Dumped (terminate) -->
+    <bpmn:endEvent id="End_BatchDumped" name="Batch Dumped">
+      <bpmn:incoming>Flow_Dump_Batch</bpmn:incoming>
+      <bpmn:incoming>Flow_FermHold_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- SEQUENCE FLOWS -->
+    <bpmn:sequenceFlow id="Flow_Start_to_Mashing" sourceRef="Start_Brewing" targetRef="Task_Mashing" />
+    <bpmn:sequenceFlow id="Flow_Mashing_to_Lautering" sourceRef="Task_Mashing" targetRef="Task_Lautering" />
+    <bpmn:sequenceFlow id="Flow_Lautering_to_Boiling" sourceRef="Task_Lautering" targetRef="Task_Boiling" />
+    <bpmn:sequenceFlow id="Flow_Boiling_to_Cooling" sourceRef="Task_Boiling" targetRef="Task_Cooling" />
+    <bpmn:sequenceFlow id="Flow_Cooling_to_FermCheck" sourceRef="Task_Cooling" targetRef="Task_FermentationCheck" />
+    <bpmn:sequenceFlow id="Flow_FermLoop_Back" sourceRef="Timer_FermWait" targetRef="Task_FermentationCheck" />
+    <bpmn:sequenceFlow id="Flow_FermCheck_to_Gateway" sourceRef="Task_FermentationCheck" targetRef="Gateway_FermComplete" />
+    <bpmn:sequenceFlow id="Flow_FermHold_to_End" sourceRef="Task_BrewmasterFermHold" targetRef="End_BatchDumped" />
+    <bpmn:sequenceFlow id="Flow_Lagering_to_QC" sourceRef="Task_Lagering" targetRef="Task_BatchQC" />
+    <bpmn:sequenceFlow id="Flow_QC_to_Gateway" sourceRef="Task_BatchQC" targetRef="Gateway_QCPassed" />
+    <bpmn:sequenceFlow id="Flow_QCHold_to_Gateway" sourceRef="Task_BrewmasterQCHold" targetRef="Gateway_BrewmasterDecision" />
+
+  </bpmn:process>
+</bpmn:definitions>
